@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 const databaseURL = process.env.MONGODB_URL;
 
-const mongoClient = new MongoClient(databaseURL);
+const mongoClient = new MongoClient(databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
 const bcrypt = require('bcrypt')
 const saltRounds = 10;
 
