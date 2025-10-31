@@ -1,0 +1,278 @@
+*{
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    
+}
+body{
+    background-color: #2E3047;
+}
+
+main {
+    display: grid;
+    place-items: center;
+}
+
+.bg img {
+    width: 100%;
+    position: absolute;
+    z-index: -1;
+    opacity: .1;
+}
+
+.room-container {
+    margin: 2%;
+    display: grid;
+    padding: 30px;
+    width: 95%;
+    height: 75vh;
+    background-color: transparent;
+    backdrop-filter: blur(6px);
+    border: 1px solid hsla(180, 24%, 35%, 0.765);
+    justify-content: center;
+    align-content: center;
+    border-radius: 30px;
+    grid-template-columns: repeat(3, 1fr);
+    grid-column-gap: 2%;
+    justify-content: space-between;
+    align-content: space-around
+}
+
+.column{
+    backdrop-filter: blur(100%);
+    background-color: #2e8a746d;
+    width: 95%;
+    height: 65vh;
+    border-radius: 30px;
+}
+
+
+main h1{
+    color: white;
+    font-size: 20px;
+    padding: 10px;
+    font-style: sans-serif;
+    text-align: left;
+}
+
+
+.column{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-column-gap: 5%;
+    justify-items: center;
+    align-items: center;
+    padding: 2%;
+}
+
+.row {
+    font-style: sans-serif;
+    border: none;
+    backdrop-filter: blur(6px);
+    background-color:#8afbbf8a;
+    height: 80px;
+    border-radius: 20px;
+    width: 68%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 800;
+    background-image: url(../images/computer.png);
+    background-position: center;
+    background-repeat: no-repeat; 
+}
+
+.row:hover {
+    background-color: #3bba9c9d;
+}
+
+.reserved {
+    background-image: url(../images/computerW.png);
+    background-color: rgba(230, 38, 38, 0.865);
+}
+
+
+.filter {
+    margin-top: 5%;
+    color: white;
+    font-size: 20px;
+    background-color: #2b7966cf;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+}
+
+.filter-container{
+    display: flex;
+}
+
+.back img {
+    width: 30%;
+}
+.back{
+    display: flex;
+    width: 100px;
+    justify-self: center;
+    align-items: center;
+}
+
+.room-id{
+    width: 20%;
+}
+.date-container, .timeframe-container{
+    width: 35%;
+    text-align: center;
+    justify-self: center;
+    align-self: center;
+}
+
+#date-input{
+    border-radius: 10px;
+    height: 30px;
+    width: 120px;
+    padding: 3px;
+    text-align: center;
+    margin: 5px;
+}
+
+select{
+    border-radius: 10px;
+    height: 30px;
+    width: 200px;
+    padding: 3px;
+    text-align: center;
+    margin: 5px;
+    font-weight: 100;
+}
+
+
+.user-input-container .text{
+    margin: 0;
+}
+
+
+.logs-container{
+    width: 85%;
+    height: 30vh;
+    border: 1px solid rgb(255, 255, 255);
+    background-color: transparent;
+    backdrop-filter: blur(6px);
+    margin: 10px;
+    overflow: auto;
+}
+
+.log-table, th, tr{
+    width: 100%;
+    border: 1px solid white;
+}
+
+th.logDateTime{
+    width: 15%;
+    border: solid 1px rgba(255, 255, 255, 0.619);
+}
+
+th.logName{
+    width: 23%;
+}
+
+.logName, .logDate, .logTime, .logDateTime, .logSeat, .logEmail, .logActions{
+    border: solid 1px rgba(255, 255, 255, 0.304);
+}
+
+th.logActions, .logDate, .logTime{
+    width: 10%;
+}
+
+.logSeat {
+    width: 5%;
+}
+
+th, td{
+    color: white;
+}
+
+#modifyRoom {
+    border-radius: 6px;
+    background-color: #55c4aa;
+    border: none;   
+    height: 30px;
+    width: 300px;
+    color: white;
+    font-weight: bold;
+    font-size: large;
+}
+
+#modifyRoom:hover {
+    background-color: #3BBA9C;
+}
+
+#del-room-btn {
+    border-radius: 6px;
+    background-color: #e03f3f;
+    border: none;   
+    height: 30px;
+    width: 300px;
+    color: white;
+    font-weight: bold;
+    font-size: large;
+    margin-bottom: 10px;
+}
+
+#del-room-btn:hover {
+    background-color: #db3434;
+}
+
+.modify-container{
+    margin: 20px;
+}
+
+.table-title{
+    text-align: center;
+}
+
+.sticky-header thead th {
+    position: sticky;
+    top: 0;
+    background-color: #2e8a74;
+}
+
+.confirm {
+    display: none;
+    background-color: #564F6F;
+    border: 1px solid #2D283E;
+    border-radius: 15px;
+    position: fixed;
+    width: 300px;
+    height: 100px;
+    left: 38%;
+    top: 40%;
+    text-align: center;
+}
+
+.message {
+    color: white;
+    text-align: center;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.btn {
+    color: white;
+    background-color: #707793;
+    text-align: center;
+    font-size: 16px;
+    border-radius: 5px;
+    border: 1px solid #2D283E;
+    padding-inline: 10px;
+    transition: background-color 0.3s; 
+    margin: 5px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+#cancel-btn:hover {
+    background-color: #3BBA9C;
+}
+
+#conf-del-room-btn:hover {
+    background-color: #e03f3f;
+}

@@ -1,0 +1,208 @@
+
+.fancySearchBox{
+    width: 90% !important; 
+    height: 40px !important;
+    font-size: 20px !important;
+    outline: none;
+    transition: border-color 0.3s;
+    background-color: transparent;
+    border: none;
+}
+.fancySearchBox:focus{
+    border-color: #1e2020;
+}
+.fancySearchBox::placeholder{
+    font-size:20px;
+}
+
+.searchButton{
+    background-color: #3BBA9C;
+    padding:10px 5% !important;
+    border:none;
+    outline:none;
+    color:#1e2020;
+    letter-spacing: 0.1px !important;
+    cursor: pointer;
+    transition: border-color 0.5s !important;
+    width: 100px !important;
+}
+.searchButton:hover{
+    border: 1px solid #d2e7e7 !important;
+}
+
+
+.clickableImage{
+    width:60px;
+    border-radius: 50%;
+}
+
+
+.left, .center, .right{
+    width: 33%;
+}
+
+
+.left{
+    display: flex;
+    justify-content: left;
+    text-align: center;
+    align-items: center;
+}
+
+.right{
+    display: flex;
+    justify-content: right;
+    align-items: center;
+    text-align: center;
+    white-space: nowrap;
+}
+
+header{
+    padding-top: .5% !important;
+    padding-bottom: .5% !important;
+    border-bottom: 1px solid black;
+}
+
+.fixed {
+    display: flex;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    height: 8vh;
+    z-index: 100;
+}
+
+.image-container {
+    position: relative;
+}
+
+.description {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #1e2020;
+    color:#3BBA9C;
+    padding: 5px;
+    border-radius: 5px;
+    display: none;
+}
+
+.image-container:hover .description {
+    display: block;
+}
+
+.clickableImage.logo{
+    width: 45% !important;
+    align-self: left !important;
+    border-radius: 0;
+}
+
+.center{
+    justify-content: left;
+}
+
+.center form{
+    display: flex;
+    width: 100%;
+}
+
+.search-container{
+    background-color: azure;
+    border-radius: 30px;
+    overflow: hidden;
+    height: 5vh;
+    display: flex;
+}
+
+.profile img{
+    object-fit: cover;
+    width: 50px;
+    height: 50px;
+    border-radius: 100%
+}
+
+.profile {
+    justify-content: right;
+    padding-right: 2%;
+}
+
+.sub-menu-wrap {
+    position: absolute;
+    top: 100%;
+    right: 1%;
+    width: 280px;
+    background-color: #43455C;
+    justify-content: center;
+    margin: 10px;
+    border-radius: 10%;
+    max-height: 0px;
+    overflow: hidden;
+    transition: max-height 0.5s;
+}
+
+.sub-menu-wrap.open-menu{
+    max-height: 400px;
+}
+
+.sub-menu-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.sub-menu {
+    padding: 10px;
+}
+
+
+.sub-menu-navigation {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.sub-menu-navigation table {
+    border-top: 2px solid white;
+    border-bottom: 2px solid white;
+    width: 100%;
+}
+
+.sub-menu-profile img{
+    object-fit: cover;
+    width: 80px;
+    height: 80px;
+    border-radius: 100%;
+    margin: 20px;
+}
+
+
+.sub-menu-navigation .sub-nav {
+    font-size: 20px;
+    color: white;
+    font-style: sans-serif;
+    padding: 10px;
+    border-radius: 1%;
+    margin: 5px;
+    border-radius: 10px;
+}
+
+.profile-detail {
+    color: white;
+    padding: 5px;
+}
+
+
+
+.sub-nav:hover {
+    background-color: #cacfff91;
+}
+
+a.link-text { text-decoration: none; color: inherit;}
+
+
+
+
+
+

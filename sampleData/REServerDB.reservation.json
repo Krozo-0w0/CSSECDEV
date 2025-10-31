@@ -1,0 +1,75 @@
+[{
+  "_id": {
+    "$oid": "65f1e0614b70cd3ed5ea8eef"
+  },
+  "dateTime": "2024-03-14|01:20:33",
+  "name": "Ford",
+  "email": "ford_chung@dlsu.edu.ph",
+  "bookDate": "2024-03-15",
+  "seat": "C1S1",
+  "room": "G301A",
+  "timeFrame": "09:00-09:30",
+  "anon": false,
+  "status": "active",
+  "isWalkin": true
+},
+{
+  "_id": {
+    "$oid": "65f1e08e4b70cd3ed5ea8ef0"
+  },
+  "dateTime": "2024-03-14|01:21:18",
+  "name": "Peter Parker",
+  "email": "peter_parker@dlsu.edu.ph",
+  "bookDate": "2024-03-15",
+  "seat": "C2S5",
+  "room": "G301B",
+  "timeFrame": "09:00-09:30",
+  "anon": false,
+  "status": "active",
+  "isWalkin": false
+},
+{
+  "_id": {
+    "$oid": "65f1e0a44b70cd3ed5ea8ef1"
+  },
+  "dateTime": "2024-03-14|01:21:40",
+  "name": "Alex Chang",
+  "email": "achang@dlsu.edu.ph",
+  "bookDate": "2024-03-15",
+  "seat": "C2S11",
+  "room": "G302A",
+  "timeFrame": "09:00-09:30",
+  "anon": false,
+  "status": "active",
+  "isWalkin": false
+},
+{
+  "_id": {
+    "$oid": "65f1e0b74b70cd3ed5ea8ef2"
+  },
+  "dateTime": "2024-03-14|01:21:59",
+  "name": "Sarah Patel",
+  "email": "spatel@dlsu.edu.ph",
+  "bookDate": "2024-03-15",
+  "seat": "C2S1",
+  "room": "G302B",
+  "timeFrame": "09:00-09:30",
+  "anon": true,
+  "status": "active",
+  "isWalkin": false
+},
+{
+  "_id": {
+    "$oid": "65f1e0d04b70cd3ed5ea8ef3"
+  },
+  "dateTime": "2024-03-14|01:22:24",
+  "name": "Marcus Lee",
+  "email": "mlee@dlsu.edu.ph",
+  "bookDate": "2024-03-15",
+  "seat": "C3S7",
+  "room": "G303A",
+  "timeFrame": "09:00-09:30",
+  "anon": false,
+  "status": "active",
+  "isWalkin": false
+}]

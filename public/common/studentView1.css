@@ -1,0 +1,131 @@
+*{
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    
+}
+
+body{
+    background-color: #2E3047;
+}
+
+main {
+    display: grid;
+    place-items: center;
+}
+
+.bg img {
+    width: 100%;
+    position: absolute;
+    z-index: -1;
+    opacity: .1;
+}
+
+.column{
+    backdrop-filter: blur(100%);
+    background-color: #2e8a746d;
+    width: 95%;
+    height: 65vh;
+    border-radius: 30px;
+}
+
+main h1{
+    color: white;
+    font-size: 20px;
+    padding: 10px;
+    font-style: sans-serif;
+    text-align: left;
+}
+
+.column{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-column-gap: 5%;
+    justify-items: center;
+    align-items: center;
+    padding: 2%;
+}
+
+.row {
+    font-style: sans-serif;
+    border: none;
+    backdrop-filter: blur(6px);
+    background-color:#8afbbf8a;
+    height: 80px;
+    border-radius: 20px;
+    width: 68%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 800;
+    background-image: url(../images/computer.png);
+    background-position: center;
+    background-repeat: no-repeat; 
+}
+
+.row:hover {
+    background-color: #3bba9c9d;
+}
+
+.reserved {
+    background-image: url(../images/computerW.png);
+    background-color: rgba(230, 38, 38, 0.865);
+}
+
+.reserved:hover {
+    background-color: #e03f3f;
+}
+
+.filter {
+    margin-top: 5%;
+    color: white;
+    font-size: 20px;
+    background-color: #2b7966cf;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+}
+
+.filter-container{
+    display: flex;
+}
+
+.back img {
+    width: 30%;
+}
+
+.back{
+    display: flex;
+    width: 100px;
+    justify-self: center;
+    align-items: center;
+}
+
+.room-id{
+    width: 20%;
+}
+
+.date-container, .timeframe-container{
+    width: 35%;
+    text-align: center;
+    justify-self: center;
+    align-self: center;
+}
+
+#date-input{
+    border-radius: 10px;
+    height: 30px;
+    width: 120px;
+    padding: 3px;
+    text-align: center;
+    margin: 5px;
+}
+
+select{
+    border-radius: 10px;
+    height: 30px;
+    width: 200px;
+    padding: 3px;
+    text-align: center;
+    margin: 5px;
+    font-weight: 100;
+}

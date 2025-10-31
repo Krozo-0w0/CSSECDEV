@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="/common/main.css">
+<link rel="stylesheet" href="/common/mainMenu.css">
+<link rel="stylesheet" href="/common/mainMenuBody.css">
+<link rel="stylesheet" type="text/css" href="/common/navbar.css">
+<script src="/common/filterHandler.js"> </script>
+
+<nav>
+    <header class="fixed">
+
+    <div class="left">
+        <img class = "clickableImage logo" onclick="redirectToMainPage()" src="/images/RESERVER (1).png" alt = "Clickable Image">
+    </div>
+
+    <div class="center">
+        <div>
+            <form class="search-container" action='/searchFunction' method='post'>
+                <input class="fancySearchBox" type="search-input" name="stringInput" id="stringInput" placeholder="What are you looking for?">
+                <button class="searchButton" id="searchButton" type="submit">Search</button>
+            </form>
+        </div>
+
+    </div>
+
+    <div class="right">
+        <div class="profile" onclick="toggleMenu()"> 
+            <img id="profile-image" src="{{user.pfp}}" >
+        </div>
+
+        <div class="sub-menu-wrap" id="subMenu">
+            <div class="sub-menu">
+                <div class="sub-menu-profile"> 
+                    <img id="profile-image" src="{{user.pfp}}">
+                    <div class="profile-detail">{{user.username}}</div>
+                    <div class="profile-detail" id="userEmail">{{user.email}}</div>
+                </div>
+                <div class="sub-menu-navigation">
+                    <table>
+                        <tr onclick="redirectToProfile()">
+                            <td class="sub-nav">View Profile</td>
+                        </tr>
+                        <tr onclick="redirectToMainPage()">
+                            <td class="sub-nav">Reservation</td>
+                        </tr>
+                        <tr onclick="redirectToAbout()">
+                            <td class="sub-nav">About</td>
+                        </tr>
+                    </table>
+                    <div class="sub-nav" onclick="window.location.href='/logout'">Sign Out</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</header>
+
+  </nav>

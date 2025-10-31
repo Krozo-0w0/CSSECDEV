@@ -1,0 +1,31 @@
+<div class="centerBox">
+    <div class="childContainer borderDefault">
+        <div>
+            <h1> Register </h1>
+        </div>
+        <hr>
+            <div> 
+                <form action="register-checker" method="post">
+                    <div id="emailErrorContainer">
+                        {{emailErrMsg}}
+                    </div>
+                    <input class="inputBox" type="text" placeholder="Email" id="email" name="email"></input>
+                    <input class="inputBox" type="text" placeholder="Username" id="username" name="username"></input>
+                    <div class="passwordErrorContainer">
+                        <input class="inputBox" type="password" placeholder="Password" id="password" name="password"></input>
+                    </div>
+                    <div id="vPasswordErrorContainer">
+                        {{vpassErrMsg}}
+                    </div>
+                    <input class="inputBox" type="password" placeholder="Verify Password" id="vpassword" name="vpassword"></input>
+                <div class="">
+                    <h4> I am a Laboratory Technician <input type="checkbox" name="isTechnician"></input></h4>
+                </div>
+                    <input class="button" type="submit" value="Register" id="register-btn">
+                </form>
+            </div>
+
+        <hr>
+        <h4> Already have an Account? <a href="/"> Log in </a></h4>
+    </div>
+</div>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<head>
+    <title>{{title}}</title>
+
+    <link href="/common/roomTech.css" rel="stylesheet">
+
+    <script src="/common/jquery-3.7.1.min.js"></script>
+    <script src="/common/filterHandler.js"> </script>
+    <script src="/common/loader.js"> </script>
+    <script src="/common/mainMenu.js"> </script>
+    <script src="/common/reserveTech.js"></script>
+    <link href="/common/modalTech.css" rel="stylesheet">
+
+
+    <script>
+        function goback(){
+            location.href="/mainMenu";
+        }
+
+
+    </script>
+
+    <style>
+    .room-container {
+        margin: 2%;
+        display: grid;
+        padding: 30px;
+        width: 95%;
+        height: 75vh;
+        background-color: transparent;
+        backdrop-filter: blur(6px);
+        border: 1px solid hsla(180, 24%, 35%, 0.765);
+        justify-content: center;
+        align-content: center;
+        border-radius: 30px;
+        grid-template-columns: repeat({{lab.numCols}}, 1fr);
+        grid-column-gap: 2%;
+        justify-content: space-between;
+        align-content: space-around
+    }
+    </style>
+    
+
+</head>
+<body>
+    {{>navbar}}
+
+    <div class="bg">
+        <img src="/images/computerLab.jpg">
+    </div>
+    <header>
+        <div id="nav-placeholder">
+            {{>modalTech}}
+        </div>
+    </header>
+
+    <div id="modal-placeholder">
+
+    </div>
+
+    <div id="overlay"></div>
+
+    {{{body}}}
+
+</body>
+</html>

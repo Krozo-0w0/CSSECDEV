@@ -1,0 +1,74 @@
+[{
+  "_id": {
+    "$oid": "65e62b3aca7a8c989786e652"
+  },
+  "roomNum": "G301A",
+  "totalSeats": 36,
+  "building": "GOKONGWEI",
+  "floor": 3,
+  "timeStart": 900,
+  "timeEnd": 1700,
+  "tags": "HOT",
+  "numCols": 3,
+  "rowWidth": "3",
+  "seats": "12"
+},
+{
+  "_id": {
+    "$oid": "65e62c14ca7a8c989786e653"
+  },
+  "roomNum": "G301B",
+  "totalSeats": 30,
+  "building": "GOKONGWEI",
+  "floor": 3,
+  "timeStart": 900,
+  "timeEnd": 1700,
+  "tags": "COLD",
+  "numCols": 3,
+  "rowWidth": "3",
+  "seats": "10"
+},
+{
+  "_id": {
+    "$oid": "65e63cd6ca7a8c989786e654"
+  },
+  "roomNum": "G302A",
+  "totalSeats": 24,
+  "building": "GOKONGWEI",
+  "floor": 3,
+  "timeStart": 900,
+  "timeEnd": 1700,
+  "tags": "GOOD",
+  "numCols": 2,
+  "seats": "12"
+},
+{
+  "_id": {
+    "$oid": "65e63cdcca7a8c989786e655"
+  },
+  "roomNum": "G302B",
+  "totalSeats": 27,
+  "building": "GOKONGWEI",
+  "floor": 3,
+  "timeStart": 900,
+  "timeEnd": 1700,
+  "tags": "COLD",
+  "numCols": 3,
+  "rowWidth": "2",
+  "seats": "9"
+},
+{
+  "_id": {
+    "$oid": "65e63cdeca7a8c989786e656"
+  },
+  "roomNum": "G303A",
+  "totalSeats": 36,
+  "building": "GOKONGWEI",
+  "floor": 3,
+  "timeStart": 900,
+  "timeEnd": 1700,
+  "tags": "GOOD",
+  "numCols": 3,
+  "rowWidth": "3",
+  "seats": "12"
+}]

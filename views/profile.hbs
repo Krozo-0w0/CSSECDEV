@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="/common/profile.css">
+<script src="/common/profile.js"></script>
+
+<main>
+        <img id="prof-pic" src="{{user.pfp}}">
+        <h1 id="name">{{user.username}}</h1>
+        <p id="bio">{{user.bio}}</p>
+        <div id="prof-buttons-div">
+            <form action="edit-profile" method="get">
+                <button type="submit" class="save">Edit profile</button>
+            </form>
+            <button type="button" class="delete" id="del-prof-confirm">Delete profile</button>
+        </div>
+        <h2>Current Reservations:</h2>
+
+        {{#each reserves}}
+        <details>
+            <summary>{{room}} - {{bookDateShortVerbose}} {{timeFrame}}</summary>
+            <p>Laboratory: {{room}}</p>
+            <p>Seat Number: {{seat}}</p>
+            <p>Reservation: {{bookDateVerbose}} {{timeFrame}}</p>
+            <p>Requested: {{dateLogged}} {{timeLogged}} (UTC+00:00)</p>
+            <div id="resv-buttons-div">
+                <form action="/editReservation" method="get">
+                    <button type="submit" value="{{room}}" name="roomNum" id="roomNum">Edit/Delete Reservation</button>
+                </form>
+            </div>
+        </details>
+        {{/each}}
+
+        <div id="del-prof">
+            <p class="message" id="del-prof-msg">Confirm delete profile?</p>
+            <button class="delete" id="del-prof-btn">Proceed</button>
+            <button class="save" id="save-prof-btn">Cancel</button>
+        </div>
+    </main>

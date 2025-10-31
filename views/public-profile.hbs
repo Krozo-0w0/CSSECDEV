@@ -1,0 +1,16 @@
+<link rel="stylesheet" href="/common/profile.css">
+
+<script>
+    function redirectRoom(){
+        history.back();
+    }
+</script>
+
+<div class="back" onclick="redirectRoom()">
+    <img src="/images/back.png">
+</div>
+<main>
+    <img id="prof-pic" src="{{userPublic.pfp}}">
+    <h1 id="name">{{userPublic.username}}</h1>
+    <p id="bio">{{userPublic.bio}}</p>
+</main>
