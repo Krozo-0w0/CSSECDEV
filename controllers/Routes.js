@@ -152,8 +152,9 @@ server.post('/register-checker', function(req, resp){
     var userPassword = String(req.body.password);
     var userVPassword = String(req.body.vpassword);
     var isTechnician = String(req.body.isTechnician);
+    var isRoleA = String(req.body.isRoleA);
 
-    responder.addUser(userEmail, userName, userPassword, userVPassword,isTechnician)
+    responder.addUser(userEmail, userName, userPassword, userVPassword,isTechnician, isRoleA)
     .then(result => {
         if (result == "Success!"){
             resp.redirect('/');
@@ -207,9 +208,6 @@ server.post('/register-checker', function(req, resp){
 
 // PROFILE 
 server.get('/profile', isAuth, function(req, resp) {
-
-    
-    
     responder.getReservedOfPerson( req.session.curUserData.email)
     .then(myReserves => {
 
@@ -246,38 +244,59 @@ server.get('/about', isAuth, function(req, resp) {
 // MAIN MENU 
 server.get('/mainMenu', isAuth, function(req, resp) {
     req.session.isLabs = true;
-    if(req.query.labs != null){
-        let labs = [];
-        labs = JSON.parse(req.query.labs);
-        resp.render('mainMenu', {
-            layout: 'mainMenuIndex',
-            title: 'Main Menu',
-            labs: labs,
-            user:  req.session.curUserData
-        });
-    } else{
-    // get lab data for display
-    req.session.searchQuery = null;
-    responder.getLabs()
-    .then(labData => {
-        let seenLabs = [];
-        for (let i = 0; i < 3 && i < labData.length; i++){
-            seenLabs.push(labData[i]);
-        }
-         req.session.labPtr = seenLabs.length;
+    
+    responder.getUserByEmail(req.session.curUserMail)
+    .then(name => {
+        if(req.query.labs != null){
+            let labs = [];
+            labs = JSON.parse(req.query.labs);
+            resp.render('mainMenu', {
+                layout: 'mainMenuIndex',
+                title: 'Main Menu',
+                labs: labs,
+                user:  req.session.curUserData
+            });
+        } else{
+        // get lab data for display
+        req.session.searchQuery = null;
+        responder.getLabs()
+        .then(labData => {
+            let seenLabs = [];
+            for (let i = 0; i < 3 && i < labData.length; i++){
+                seenLabs.push(labData[i]);
+            }
+            req.session.labPtr = seenLabs.length;
 
-        // render main menu
-        resp.render('mainMenu',{
-            layout: 'mainMenuIndex',
-            title: 'Main Menu',
-            labs: seenLabs,
-            user:  req.session.curUserData
-        });         
-    })
-    .catch(error => {
-        console.error(error);
+            if(name.isTechnician){
+                resp.render('mainMenuTech', {
+                    layout: 'mainMenuIndexTech',
+                    title: 'Main Menu Technician',
+                    labs: seenLabs,
+                    user:  req.session.curUserData
+                });
+            }else if(name.isRoleA){
+                console.log("RoleA Main menu");
+                resp.render('mainMenu-role-A', {
+                    layout: 'mainMenuIndex-role-A',
+                    title: 'Main Menu Role A',
+                    labs: seenLabs,
+                    user:  req.session.curUserData
+                });
+            }else{
+                console.log("RoleB Main menu");
+                resp.render('mainMenu', {
+                    layout: 'mainMenuIndex',
+                    title: 'Main Menu',
+                    labs: seenLabs,
+                    user:  req.session.curUserData
+                });
+            }     
+        })
+        .catch(error => {
+            console.error(error);
+        });
+        }
     });
-    }
 });
 
 // delete profile
@@ -343,9 +362,6 @@ server.post('/backBtn', function(req, resp) {
 
 // EDIT-PROFILE
 server.get('/edit-profile', isAuth, function(req, resp) {
-
- 
-    
     resp.render('edit-profile',{
         layout: 'profileIndex',
         title: 'Edit Profile',
@@ -422,9 +438,6 @@ server.post('/load-labsbyTags', function(req, resp){
 })
 
 
-
-
-
 // PUBLIC PROFILE
 server.get('/public-profile/:id/', isAuth, function(req, resp) {
     req.session.isLabs = false;
@@ -487,11 +500,8 @@ server.post('/change_password', function(req, resp){
 
 // LAB VIEW
 server.get('/labs/:id/', isAuth, function(req, resp) {
-
- 
-
     console.log('LAB ID OF ' + req.params.id + '!!!!');
-     req.session.curLabId = req.params.id;
+    req.session.curLabId = req.params.id;
     let roomReservations = [];
     let room = [];
 
@@ -530,6 +540,18 @@ server.get('/labs/:id/', isAuth, function(req, resp) {
                                     resp.render('lab-view-tech', {
                                         layout: 'labIndex-tech',
                                         title: 'Lab View Tech',
+                                        user:  req.session.curUserData,
+                                        lab: curLab,
+                                        reserved: reserveList,
+                                        userRes: reserveUser,
+                                        dateData: dateData,
+                                        date: getCurrentDate(),
+                                        resData: reserveListAll
+                                    });
+                                }else if (name.isRoleA){
+                                    resp.render('lab-view-role-A', {
+                                        layout: 'labIndex-role-A',
+                                        title: 'Lab View Role A',
                                         user:  req.session.curUserData,
                                         lab: curLab,
                                         reserved: reserveList,
@@ -724,7 +746,7 @@ server.post('/reserve', function(req, resp){
     var timeFrame  = String(req.body.timeFrame);
     var anon = req.body.anon == 'true';
     var resDate = req.body.date;
-    var walkin = user.isTechnician;
+    var walkin = user.isTechnician || user.isRoleA;
 
     if(walkin){
         responder.addReservation(date+ "|" +time, req.body.name, req.body.email, resDate, seat, room, timeFrame, anon, walkin)
@@ -827,6 +849,16 @@ server.post('/dateChange', function(req, resp){
                                         date: req.body.date,
                                         resData: reserveListAll
                                     });
+                                }else if(name.isRoleA){
+                                    resp.send({
+                                        user:  req.session.curUserData,
+                                        lab: curLab,
+                                        reserved: reserveList,
+                                        userRes: reserveUser,
+                                        dateData: dateData,
+                                        date: req.body.date,
+                                        resData: reserveListAll
+                                    });
                                 }else{
                                     resp.send({
                                         user:  req.session.curUserData,
@@ -869,9 +901,6 @@ server.post('/dateChange', function(req, resp){
 });
 
 server.get('/modifyLab', isAuth, function(req, resp){
-
- 
-
     responder.getLabById( req.session.curLabId)
     .then(curLab => {
         responder.getTimeslots(curLab, getCurrentDate())
@@ -890,8 +919,25 @@ server.get('/modifyLab', isAuth, function(req, resp){
     .catch(error => {
         console.error(error);
     });
+});
 
-
+server.get('/manageRoles', isAuth, function(req, resp){
+    responder.getUserByEmail(req.session.curUserMail)
+    .then(user => {
+        if(user.isTechnician){
+            resp.render('manageRolesTech', {
+            layout: 'manageRolesIndexTech',
+            title: 'Manage Technician',
+            date: getCurrentDate()
+    });
+        }else{
+            resp.render('manageRoles-role-A', {
+            layout: 'manageRolesIndex-role-A',
+            title: 'Manage Role A',
+            date: getCurrentDate()
+    });
+        }
+    });
 });
 
 server.post('/changeModifyLab', function(req, resp){

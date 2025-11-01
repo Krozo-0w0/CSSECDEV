@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 const databaseURL = process.env.MONGODB_URL;
 
-const mongoClient = new MongoClient(databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
+const mongoClient = new MongoClient(databaseURL);
 const bcrypt = require('bcrypt')
 const saltRounds = 10;
 
@@ -82,7 +82,7 @@ function getUser(userEmail, userPassword) {
 module.exports.getUser = getUser;
 
 
-function addUser(userEmail, userName, userPassword, userVPassword,isTechnician){
+function addUser(userEmail, userName, userPassword, userVPassword, isTechnician, isRoleA){
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
     searchQuery = {email: userEmail};
@@ -104,13 +104,20 @@ function addUser(userEmail, userName, userPassword, userVPassword,isTechnician){
                     } else{
                         isTechnician = false;
                     }
+
+                    if(isRoleA === 'on'){
+                        isRoleA = true;
+                    } else{
+                        isRoleA = false;
+                    }
                     const info = {
                         email: userEmail,
                         password: userPassword,
                         isTechnician: isTechnician,
                         pfp: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
                         username: userName,
-                        bio: ""
+                        bio: "",
+                        isRoleA: isRoleA
                     };
                     col.insertOne(info).then(function(res){
                     }).catch(errorFn);
