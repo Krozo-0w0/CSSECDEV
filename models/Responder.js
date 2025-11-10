@@ -86,6 +86,7 @@ function addUser(userEmail, userName, userPassword, userVPassword, isTechnician,
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
     searchQuery = {email: userEmail};
+    var role = "roleB";
     return new Promise((resolve, reject) => {
         col.findOne(searchQuery).then(function(val){
             console.log(userPassword);
@@ -100,24 +101,19 @@ function addUser(userEmail, userName, userPassword, userVPassword, isTechnician,
                 bcrypt.hash(userPassword, saltRounds, function(err, hash) {
                     userPassword = hash;
                     if(isTechnician === 'on'){
-                        isTechnician = true;
-                    } else{
-                        isTechnician = false;
-                    }
+                        role = "admin";
+                    } 
 
                     if(isRoleA === 'on'){
-                        isRoleA = true;
-                    } else{
-                        isRoleA = false;
-                    }
+                        role = "roleA";
+                    } 
                     const info = {
                         email: userEmail,
                         password: userPassword,
-                        isTechnician: isTechnician,
+                        role: role,
                         pfp: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
                         username: userName,
                         bio: "",
-                        isRoleA: isRoleA
                     };
                     col.insertOne(info).then(function(res){
                     }).catch(errorFn);
@@ -160,6 +156,57 @@ function getAllUsers() {
 }
 module.exports.getAllUsers = getAllUsers;
 
+function getAllRoleA() {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+    const searchQuery = { isRoleA: true };
+
+    return new Promise((resolve, reject) => {
+        col.find(searchQuery).toArray()
+            .then(vals => resolve(vals))
+            .catch(err => reject(err));
+    });
+}
+module.exports.getAllRoleA = getAllRoleA;
+
+function getAllRoleAdmin() {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+    const searchQuery = { role: "admin" };
+
+    return new Promise((resolve, reject) => {
+        col.find(searchQuery).toArray()
+            .then(vals => resolve(vals))
+            .catch(err => reject(err));
+    });
+}
+module.exports.getAllRoleAdmin = getAllRoleAdmin;
+
+function getAllRoleB() {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+    const searchQuery = { role: "roleB" };
+
+    return new Promise((resolve, reject) => {
+        col.find(searchQuery).toArray()
+            .then(vals => resolve(vals))
+            .catch(err => reject(err));
+    });
+}
+module.exports.getAllRoleB = getAllRoleB;
+
+function getNonAdmin() {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+    const searchQuery = { role: { $in: ["roleA", "roleB"] } };
+
+    return new Promise((resolve, reject) => {
+        col.find(searchQuery).toArray()
+            .then(vals => resolve(vals))
+            .catch(err => reject(err));
+    });
+}
+module.exports.getNonAdmin = getNonAdmin;
 
 function getUserbyId(userId) {
     const dbo = mongoClient.db(databaseName);

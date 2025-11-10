@@ -1,8 +1,54 @@
 <main class="mod-container">
-    <div class="modification-wrap">
-        <div class="head-container">
-            <div class="back" onclick="redirectRoom()"><img src="/images/back.png"></div>
-            <div id="modify-Maintitle"><h1>Modify Room Availability</h1></div>
-        </div>
+    <div class="head-container">
+        <div class="back"><img src="/images/back.png" onclick="redirectRoom()"></div>
+        <div id="manage-Maintitle">Manage All roles</div>
     </div>
+    <div id="button-container">
+        <div id="add-user-button" onclick="window.location.href='/register'">Add User</div>
+        <div id="save-button">Save</div>
+    </div>
+    
+    <div class="userListContainer">
+        <table class="log-table" id="log-table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each resData}}
+                <tr>
+                    <td>{{email}}</td>
+                    <td>{{username}}</td>
+                    <td>{{role}}</td>
+                    <td><input class="assign-button" id="{{email}}" type="submit" value="Assign"> 
+                        <input class="delete-button"  id="{{email}}" type="submit" value="Delete"></th>
+                </tr>
+            {{/each}}
+        </tbody>
+
+        </table>
+    </div>
+
+    <!-- Pop-out Assign Modal -->
+    <div id="assignModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" id="closeAssignModal">&times;</span>
+        <h2>Assign Role</h2>
+        <p id="selectedUser"></p>
+
+        <label for="newRole">Select new role:</label>
+        <select id="newRole">
+        <option value="roleA">Role A</option>
+        <option value="roleB">Role B</option>
+        <option value="technician">Technician</option>
+        </select>
+
+        <button id="saveRoleBtn">Save</button>
+    </div>
+    </div>
+
 </main>

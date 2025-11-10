@@ -44,12 +44,12 @@ body{
     align-items: center;
 }
 
-#modify-Maintitle h1, .modify-titles{
+#manage-Maintitle h1, .modify-titles{
     color: white;
     font-style: sans-serif;
 }
 
-#modify-Maintitle h1{
+#manage-Maintitle h1{
     font-size: 2em;
 }
 
@@ -79,7 +79,7 @@ body{
     width: 60%;
 }
 
-#modify-Maintitle{
+#manage-Maintitle{
     display: flex;
     width: 100%;
     justify-content: center;

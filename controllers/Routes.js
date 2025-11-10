@@ -151,8 +151,8 @@ server.post('/register-checker', function(req, resp){
     var userName  = String(req.body.username);
     var userPassword = String(req.body.password);
     var userVPassword = String(req.body.vpassword);
-    var isTechnician = String(req.body.isTechnician);
-    var isRoleA = String(req.body.isRoleA);
+    var isTechnician = String(req.body.role == "admin");
+    var isRoleA = String(req.body.role == "roleA");
 
     responder.addUser(userEmail, userName, userPassword, userVPassword,isTechnician, isRoleA)
     .then(result => {
@@ -267,14 +267,14 @@ server.get('/mainMenu', isAuth, function(req, resp) {
             }
             req.session.labPtr = seenLabs.length;
 
-            if(name.isTechnician){
+            if(name.role == "admin"){
                 resp.render('mainMenuTech', {
                     layout: 'mainMenuIndexTech',
                     title: 'Main Menu Technician',
                     labs: seenLabs,
                     user:  req.session.curUserData
                 });
-            }else if(name.isRoleA){
+            }else if(name.role == "roleA"){
                 console.log("RoleA Main menu");
                 resp.render('mainMenu-role-A', {
                     layout: 'mainMenuIndex-role-A',
@@ -536,7 +536,7 @@ server.get('/labs/:id/', isAuth, function(req, resp) {
                                 reserveUser = reserveUser.map(entry => entry.seat);
                                 roomUser = reserveUser.map(entry => entry.room);
 
-                                if(name.isTechnician){
+                                if(name.role == "admin"){
                                     resp.render('lab-view-tech', {
                                         layout: 'labIndex-tech',
                                         title: 'Lab View Tech',
@@ -548,7 +548,7 @@ server.get('/labs/:id/', isAuth, function(req, resp) {
                                         date: getCurrentDate(),
                                         resData: reserveListAll
                                     });
-                                }else if (name.isRoleA){
+                                }else if (name.role == "roleA"){
                                     resp.render('lab-view-role-A', {
                                         layout: 'labIndex-role-A',
                                         title: 'Lab View Role A',
@@ -746,7 +746,7 @@ server.post('/reserve', function(req, resp){
     var timeFrame  = String(req.body.timeFrame);
     var anon = req.body.anon == 'true';
     var resDate = req.body.date;
-    var walkin = user.isTechnician || user.isRoleA;
+    var walkin = user.role == "admin" || user.role == "roleA";
 
     if(walkin){
         responder.addReservation(date+ "|" +time, req.body.name, req.body.email, resDate, seat, room, timeFrame, anon, walkin)
@@ -839,7 +839,7 @@ server.post('/dateChange', function(req, resp){
                                 roomUser = reserveUser.map(entry => entry.room);
                                 
 
-                                if(name.isTechnician){
+                                if(name.role == "admin"){
                                     resp.send({
                                         user:  req.session.curUserData,
                                         lab: curLab,
@@ -849,7 +849,7 @@ server.post('/dateChange', function(req, resp){
                                         date: req.body.date,
                                         resData: reserveListAll
                                     });
-                                }else if(name.isRoleA){
+                                }else if(name.role == "roleA"){
                                     resp.send({
                                         user:  req.session.curUserData,
                                         lab: curLab,
@@ -924,21 +924,34 @@ server.get('/modifyLab', isAuth, function(req, resp){
 server.get('/manageRoles', isAuth, function(req, resp){
     responder.getUserByEmail(req.session.curUserMail)
     .then(user => {
-        if(user.isTechnician){
-            resp.render('manageRolesTech', {
-            layout: 'manageRolesIndexTech',
-            title: 'Manage Technician',
-            date: getCurrentDate()
-    });
+        if(user.role == "admin"){
+            responder.getNonAdmin()
+            .then(nonAdmin => {
+                resp.render('manageRolesTech', {
+                layout: 'manageRolesIndexTech',
+                title: 'Manage Technician',
+                date: getCurrentDate(),
+                resData: nonAdmin
+            });
+        });
         }else{
-            resp.render('manageRoles-role-A', {
-            layout: 'manageRolesIndex-role-A',
-            title: 'Manage Role A',
-            date: getCurrentDate()
-    });
+            responder.getAllRoleB()
+            .then(roleB => {
+                resp.render('manageRoles-role-A', {
+                layout: 'manageRolesIndex-role-A',
+                title: 'Manage Role A',
+                date: getCurrentDate(),
+                resData: roleB
+            });
+            });
         }
+            
     });
 });
+
+function getRole(){
+    
+}
 
 server.post('/changeModifyLab', function(req, resp){
     responder.getLabById( req.session.curLabId)
