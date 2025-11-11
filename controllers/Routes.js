@@ -741,35 +741,46 @@ server.post('/reserve', function(req, resp){
 
     responder.getUserByEmail( req.session.curUserMail)
     .then(user=>{
-    
-    var seat  = String(req.body.seat);
-    var room  = String(req.body.room);
-    var timeFrame  = String(req.body.timeFrame);
-    var anon = req.body.anon == 'true';
-    var resDate = req.body.date;
-    var walkin = user.role == "admin" || user.role == "roleA";
+        responder.getUserByEmail( req.body.email)
+        .then(reserving => {
 
-    if(walkin){
-        responder.addReservation(date+ "|" +time, req.body.name, req.body.email, resDate, seat, room, timeFrame, anon, walkin)
-    }else{
-        responder.addReservation(date+ "|" +time, user.username, user.email, resDate, seat, room, timeFrame, anon, walkin)
-    }
+            if(reserving){
+                var seat  = String(req.body.seat);
+                var room  = String(req.body.room);
+                var timeFrame  = String(req.body.timeFrame);
+                var anon = req.body.anon == 'true';
+                var resDate = req.body.date;
+                var walkin = user.role == "admin" || user.role == "roleA";
+                var name;
 
-        let obj = {
-            dateTime: date+ "|" +time,
-            name: req.body.name,
-            email: req.body.email,
-            bookDate: resDate,
-            seat: seat,
-            room: room,
-            timeFrame: timeFrame,
-            anon: anon,
-            status: "active",
-            isWalkin: walkin,
-        };
+                if(walkin){
+                    console.log(reserving.username);
+                    name = reserving.username;
+                    responder.addReservation(date+ "|" +time, name, req.body.email, resDate, seat, room, timeFrame, anon, walkin)
+                }else{
+                    name = user.username;
+                    responder.addReservation(date+ "|" +time, name, user.email, resDate, seat, room, timeFrame, anon, walkin)
+                }
 
-        resp.send({status: "reserved", reserve: obj});
-                
+                    let obj = {
+                        dateTime: date+ "|" +time,
+                        name: name,
+                        email: req.body.email,
+                        bookDate: resDate,
+                        seat: seat,
+                        room: room,
+                        timeFrame: timeFrame,
+                        anon: anon,
+                        status: "active",
+                        isWalkin: walkin,
+                    };
+
+                    resp.send({status: "reserved", reserve: obj});
+            }else{
+                resp.send({status: "failed", reserve: null});
+            }
+            
+        });                
     })
     .catch(error => {
         console.error(error);

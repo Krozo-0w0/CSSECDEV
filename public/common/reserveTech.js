@@ -159,14 +159,10 @@ $(".cancel").click(function(){
     let res = document.getElementById("anon").checked;
     var selectedDate = $('#date-input').val();
 
-
-
     //get name and email of the walkin student
-    var name = $("#reserved-name").val();
     var email = $("#reserved-email").val();
-
-    if (name.trim() === '' || email.trim() === '') {
-      alert('Name and Email fields are required!');
+    if (email.trim() === '') {
+      alert('Email field is required!');
       return;
     }
 
@@ -179,10 +175,10 @@ $(".cancel").click(function(){
       function(data, status){
         if(status==='success'){
           if(data.status === 'avail'){
-
-              $.post('../reserve', {room: room, seat: id, anon: res, date: selectedDate, timeFrame: selectedOption, email, name}, 
+              $.post('../reserve', {room: room, seat: id, anon: res, date: selectedDate, timeFrame: selectedOption, email}, 
               function(data, status){
                 if(status === 'success'){
+                  
                   if(data.status === "reserved"){
                     let block = document.getElementById(id);
             
@@ -205,6 +201,8 @@ $(".cancel").click(function(){
 
                     var logTable = $("#log-table").html($("#log-table").html() + logData);
 
+                  }else{
+                    alert(`Email ${email} don't exist`);
                   }
                 }
               });
