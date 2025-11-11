@@ -1,0 +1,30 @@
+<main class="mod-container">
+    <div class="modification-wrap">
+        <div class="head-container">
+            <div class="back" onclick="redirectRoom()"><img src="/images/back.png"></div>
+            <div id="modify-Maintitle"><h1>Modify Room Availability</h1></div>
+        </div>
+        <div class="selectedDate">
+            <div><label class="modify-titles" for>Select Date</label></div>
+            <div><input type="date" id="date" value="{{date}}"></div>
+        </div>
+
+        <div class="add-timeslots">
+            <div><label class="modify-titles" for>Add time Slots</label></div>
+            <label class="modify-titles" for="start-time">Time is a constant 30 mins:</label>
+            <input type="time" id="start-time" name="start-time" required><br><br>
+
+            <div><button id='add'>Add</button></div>
+        </div>
+        <div class="delete-timeslots">  
+            <div><label class="modify-titles" for>Delete Time Slots</label></div>
+            <div><select id="timeSelect">
+                    <!-- Options will be generated dynamically here -->
+                {{#each timeFrame}}
+                    <option value="{{timeStart}}-{{timeEnd}}">{{timeStart}} - {{timeEnd}}</option>
+                {{/each}}
+            </select></div>
+            <div><button id="delete">Delete</button></div>
+        </div>
+    </div>
+</main>

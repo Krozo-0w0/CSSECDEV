@@ -1,0 +1,51 @@
+<link rel="stylesheet" href="/common/about.css">
+
+<script>
+    function redirectRoom(){
+        history.back();
+    }
+</script>
+
+<div class="back" onclick="redirectRoom()">
+    <img src="/images/back.png">
+</div>
+<main>
+    <h1 id="title">About</h1>
+    <p id="desc">REServerDB is a reservation management system used to reserve slots from computer labratories.</p>
+    <h2>Features</h2>
+    <ul>
+        <li>In the main menu, users can see a list of laboratories where they can make reservations. These laboratories can be filtered using tags.</li>
+        <li>View the list of users in the main menu and see information of each user upon clicking on their name.
+        <li>Users can also customize their own profiles.</li>
+        <li>Technician accounts have extra features such as:
+            <ul>
+                <li>adding and deleting reservations for students
+                <li>editing slots</li>
+            </ul>
+        </li>
+    </ul>
+    <h2>Third party services used</h2>
+    <table id="infoTbl">
+        <tr>
+            <td id="infoCell">NPM Packages</td>
+            <td id="infoCell">express<br>
+                express-handlebars<br>
+                body-parser<br>
+                mongodb<br>
+                bcrypt
+            </td>
+        </tr>
+        <tr>
+            <td id="infoCell">Third Party Libraries</td>
+            <td id="infoCell">JQuery</td>
+        </tr>
+        <tr>
+            <td id="infoCell">Back-end Database</td>
+            <td id="infoCell">MongoDB Atlas</td>
+        </tr>
+        <tr>
+            <td id="infoCell">Hosting</td>
+            <td id="infoCell">Render</td>
+        </tr>
+    </table>
+</main>

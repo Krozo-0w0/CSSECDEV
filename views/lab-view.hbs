@@ -1,0 +1,53 @@
+ <main>
+        <div class="filter">
+            
+            <div class="filter-container">
+                <div class="back" onclick="goback()">
+                    <img src="/images/back.png">
+                </div>
+                <div class="roomID">
+                    <h1 id="roomNum">{{lab.roomNum}}</h1>
+                </div>
+                <div class="date-container">
+                    <label for="date-input">Date: </label>
+                    <input type="date" id="date-input" name="date" value="{{date}}">
+                </div>
+
+                <div class="timeframe-container">
+                    <label for="timeSelect">TimeSlots: </label>
+                    <select id="timeSelect">
+                        <!-- Options will be generated dynamically here -->
+                        {{#each dateData}}
+                            <option value="{{timeStart}}-{{timeEnd}}">{{timeStart}} - {{timeEnd}} :: Available: {{available}}</option>
+                        {{/each}}
+                    </select>   
+                </div>
+
+            </div>
+        </div>
+
+
+        
+        <div class="room-container">
+        {{#if dateData.length}}
+            {{#nestedLoop lab.numCols}}
+                <div class="column" id="C{{outerIndex}}">
+
+                    {{#times ../lab.seats}}
+                        {{#isStringInArray (concat "C" ../outerIndex "S" this) ../../reserved}}
+                            <button class="row reserved" id="C{{../outerIndex}}S{{this}}">C{{../outerIndex}}S{{this}}</button>
+                        {{else}}
+                            <button class="row" id="C{{../outerIndex}}S{{this}}">C{{../outerIndex}}S{{this}}</button>
+                        {{/isStringInArray}}
+                        
+                    {{/times}}
+                </div>
+            {{/nestedLoop}}
+            {{else}}
+        {{/if}}
+        
+
+            
+        </div>  
+
+    </main>

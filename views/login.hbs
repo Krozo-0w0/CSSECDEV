@@ -1,0 +1,28 @@
+<div class="centerBox">
+    <div class="childContainer borderDefault">
+        <div class="loginTitle">
+            <img src="/images/RESERVER (1).png">
+        </div>
+        <hr class="borderDefault">
+        <div>
+            <div id="errorContainer">
+                {{errMsg}}
+            </div>
+
+            <form action='login-checker' method='post'>
+                <input class="inputBox" type="text" placeholder="Email" id="email" name="email"></input>
+                <input class="inputBox" type="password" placeholder="Password" id="password" name="password"> </input> 
+                <input class="button" type="submit" value="Log in" id="login-btn">
+                <div class="">
+                    <h4> Remember me on future logins <input name='remember' type="checkbox"></input></h4>
+                </div>
+                
+            </form>
+        </div>
+        <hr class="borderDefault">
+        <h4> Don't have an account? <a href="/register"> Sign up</a></h4>
+        <hr class="borderDefault">
+    </div>
+</div>
+
+

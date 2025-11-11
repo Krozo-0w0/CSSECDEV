@@ -1,0 +1,24 @@
+ <main>
+        <h1>Edit Profile</h1>
+        <form action="/save-profile" method="post">
+            <table>
+                <tr>
+                    <td><label for="username">Username</label></td>
+                    <td class="col2"><input name="username" type="text" class="input" id="username" value="{{user.username}}"></td>
+                </tr>
+                <tr>
+                    <td><label for="password">New Password (leave blank if no change)</label></td>
+                    <td class="col2"><input name="password" type="text" class="input" id="password" value=""></td>
+                </tr>
+                <tr>
+                    <td><label for="prof-pic">Profile Picture</label></td>
+                    <td class="col2"><input name="prof-pic" type="text" class="input" id="prof-pic" value="{{user.pfp}}"></td>
+                </tr>
+                <tr>
+                    <td><label for="bio">Bio</label></td>
+                    <td class="col2"><textarea name="bio" class="input" id="bio">{{user.bio}}</textarea></td>
+                </tr>
+            </table>
+            <input type="submit" id="submit" value="Save">
+        </form>
+    </main>

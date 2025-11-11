@@ -1,0 +1,77 @@
+[{
+  "_id": {
+    "$oid": "65e62a10f22f5092157bf8e1"
+  },
+  "email": "peter_parker@dlsu.edu.ph",
+  "password": "pass",
+  "isTechnician": false,
+  "pfp": "amogus.png",
+  "username": "Peter Parker",
+  "bio": "placeholder bio"
+},
+{
+  "_id": {
+    "$oid": "65e63af5b6eec2737c6954df"
+  },
+  "email": "mrod@dlsu.edu.ph",
+  "password": "p",
+  "isTechnician": false,
+  "pfp": "amogus.png",
+  "username": "Maya Rodriguez",
+  "bio": "I'm Maya Rodriguez, and my passion lies in protecting our environment and the incredible creatures that call it home. Growing up in Costa Rica, I was fortunate to be surrounded by breathtaking nature, from dense rainforests to stunning beaches. These experiences ignited a fire within me to dedicate my life to conservation efforts."
+},
+{
+  "_id": {
+    "$oid": "65e63b1c6cfb033483049776"
+  },
+  "email": "achang@dlsu.edu.ph",
+  "password": "p",
+  "isTechnician": false,
+  "pfp": "amogusreal.jpg",
+  "username": "Alex Chang",
+  "bio": " Hey there, I'm Alex Chang, and I'm all about exploring the intersection of technology and creativity. Growing up in Silicon Valley, I was surrounded by innovation and opportunity, sparking my curiosity about how technology can shape our world. "
+},
+{
+  "_id": {
+    "$oid": "65e6e5e32a61807776576230"
+  },
+  "email": "spatel@dlsu.edu.ph",
+  "password": "p",
+  "isTechnician": false,
+  "pfp": "blinkman.png",
+  "username": "Sarah Patel",
+  "bio": " Hi, I'm Sarah Patel, and I'm passionate about harnessing the power of education to drive positive change in the world. Growing up in a small town in India, I experienced firsthand the transformative impact of learning and community support. "
+},
+{
+  "_id": {
+    "$oid": "65e6f2cfca7a8c989786e658"
+  },
+  "email": "rthompson@dlsu.edu.ph",
+  "password": "p",
+  "isTechnician": false,
+  "pfp": "noice.jpg",
+  "username": "Ryan Thompson",
+  "bio": "Hey, I'm Ryan Thompson, and my passion lies in exploring the intersection of art and technology. Growing up in a family of artists and engineers, I was exposed to a unique blend of creativity and innovation from an early age."
+},
+{
+  "_id": {
+    "$oid": "65e6f2e9ca7a8c989786e659"
+  },
+  "email": "mlee@dlsu.edu.ph",
+  "password": "p",
+  "isTechnician": false,
+  "pfp": "sweatman.png",
+  "username": "Marcus Lee",
+  "bio": " Hey, I'm Marcus Lee, and I'm on a mission to blend my passion for adventure with my love for sustainable living. Growing up in the mountains of Colorado, I developed a deep appreciation for the great outdoors and the importance of preserving our natural environment. "
+},
+{
+  "_id": {
+    "$oid": "65edf545a9d98eb1dd3a43b3"
+  },
+  "email": "tech@dlsu.edu.ph",
+  "password": "pass",
+  "isTechnician": true,
+  "pfp": "amogus.png",
+  "username": "Technician",
+  "bio": ""
+}]

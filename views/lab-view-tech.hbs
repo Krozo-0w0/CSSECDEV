@@ -1,0 +1,84 @@
+<main>
+        <div class="filter">
+            
+            <div class="filter-container">
+                <div class="back" onclick="goback()">
+                    <img src="/images/back.png">
+                </div>
+                <div class="roomID">
+                    <h1 id="roomNum">{{lab.roomNum}}</h1>
+                </div>
+                <div class="date-container">
+                    <label for="date-input">Date: </label>
+                    <input type="date" id="date-input" name="date" value="{{date}}">
+                </div>
+
+                <div class="timeframe-container">
+                    <label for="timeSelect">TimeSlots: </label>
+                    <select id="timeSelect">
+                        <!-- Options will be generated dynamically here -->
+                        {{#each dateData}}
+                            <option value="{{timeStart}}-{{timeEnd}}">{{timeStart}} - {{timeEnd}} :: Available: {{available}}</option>
+                        {{/each}}
+                    </select>   
+                </div>
+
+            </div>
+        </div>
+
+        <div class="room-container">
+        {{#if dateData.length}}
+            {{#nestedLoop lab.numCols}}
+                <div class="column" id="C{{outerIndex}}">
+
+                    {{#times ../lab.seats}}
+                        {{#isStringInArray (concat "C" ../outerIndex "S" this) ../../reserved}}
+                            <button class="row reserved" id="C{{../outerIndex}}S{{this}}">C{{../outerIndex}}S{{this}}</button>
+                        {{else}}
+                            <button class="row" id="C{{../outerIndex}}S{{this}}">C{{../outerIndex}}S{{this}}</button>
+                        {{/isStringInArray}}
+                        
+                    {{/times}}
+                </div>
+            {{/nestedLoop}}
+            {{else}}
+        {{/if}}
+
+        </div>  
+
+                <h1 class="table-title">Room Reservation Logs</h1>
+        <div class="logs-container sticky-header">
+            
+            <table class="log-table" id="log-table">
+            <thead>
+                <tr>
+                    <th class="logDateTime">Date and Time</th>
+                    <th class="logName">Name</th>
+                    <th class="logActions">Status</th>
+                    <th class="logSeat">Seat</th>
+                    <th class="logDate">Date</th>
+                    <th class="logTime">Time-slot</th>
+                    <th class="logEmail">Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each resData}}
+                    <tr>
+                        <td class="logDateTime">{{dateTime}}</td>
+                        <td class="logName">{{name}}</td>
+                        <td class="logActions">{{status}}</td>
+                        <td class="logSeat">{{seat}}</td>
+                        <td class="logDate">{{bookDate}}</td>
+                        <td class="logTime">{{timeFrame}}</td>
+                        <td class="logEmail">{{email}}</td>
+                    </tr>
+                {{/each}}
+            </tbody>
+
+            </table>
+        </div>
+
+        <form action="/modifyLab" method="get">
+            <div class="modify-container"><input type="submit" id="modifyRoom" value="Modfiy Room Availability"></div>
+        </form>
+    </main>
