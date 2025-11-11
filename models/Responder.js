@@ -16,6 +16,7 @@ const colUsers = "users";
 const colLabs = "labs";
 const colReservation = "reservation";
 const colSchedule = "schedule";
+const colLogs = "logs";
 
 
 function errorFn(err){
@@ -39,6 +40,8 @@ mongoClient.connect().then(function(con){
     dbo.createCollection(colReservation)
     .then(successFn).catch(errorFn);
     dbo.createCollection(colSchedule)
+    .then(successFn).catch(errorFn);
+    dbo.createCollection(colLogs)
     .then(successFn).catch(errorFn);
 }).catch(errorFn);
 
@@ -82,7 +85,7 @@ function getUser(userEmail, userPassword) {
 module.exports.getUser = getUser;
 
 
-function addUser(userEmail, userName, userPassword, userVPassword, isTechnician, isRoleA){
+function addUser(userEmail, userName, userPassword, userVPassword, role){
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
     searchQuery = {email: userEmail};
@@ -100,13 +103,6 @@ function addUser(userEmail, userName, userPassword, userVPassword, isTechnician,
             } else {
                 bcrypt.hash(userPassword, saltRounds, function(err, hash) {
                     userPassword = hash;
-                    if(isTechnician === 'on'){
-                        role = "admin";
-                    } 
-
-                    if(isRoleA === 'on'){
-                        role = "roleA";
-                    } 
                     const info = {
                         email: userEmail,
                         password: userPassword,
@@ -844,6 +840,42 @@ function updateRole(email,role){
     });
 }
 module.exports.updateRole = updateRole;
+
+
+function addLogs(email, role, action, status){
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colLogs);
+    
+    const info = {
+        email: email,
+        role: role,
+        date: getCurrentDate(),
+        action: action,
+        status: status
+    }
+
+    col.insertOne(info).then(function(res){
+    }).catch(errorFn);
+
+}
+module.exports.addLogs = addLogs;
+
+
+function getCurrentDate() {
+    const currentDate = new Date();
+
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    const hours = String(currentDate.getHours()).padStart(2, '0');
+    const minutes = String(currentDate.getMinutes()).padStart(2, '0');
+    const seconds = String(currentDate.getSeconds()).padStart(2, '0');
+
+    const dateTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+    return dateTime;
+}
+
 
 
 function finalClose(){

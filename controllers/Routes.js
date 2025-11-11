@@ -4,6 +4,7 @@ const responder = require('../models/Responder');
 const fs = require('fs');
 const session = require('express-session');
 const { resourceLimits } = require('worker_threads');
+const { Timestamp } = require('mongodb');
 
 
 
@@ -154,13 +155,23 @@ server.post('/register-checker', function(req, resp){
     var userVPassword = String(req.body.vpassword);
     var isTechnician = String(req.body.role == "admin");
     var isRoleA = String(req.body.role == "roleA");
+    var role = "roleB";
 
-    responder.addUser(userEmail, userName, userPassword, userVPassword,isTechnician, isRoleA)
+    if(isTechnician === 'on'){
+        role = "admin";
+    } 
+
+    if(isRoleA === 'on'){
+        role = "roleA";
+    } 
+
+    responder.addUser(userEmail, userName, userPassword, userVPassword, role)
     .then(result => {
         if (result == "Success!"){
+            responder.addLogs(userEmail, role, `Success create new account.`, "Success");
             resp.redirect('/');
         } else {
-
+            responder.addLogs(userEmail, role, `Failed Account Creation.`, "Fail");
             resp.render('register',{
                 layout: 'registerIndex',
                 title: 'Register Page',
@@ -179,11 +190,12 @@ server.post('/register-checker', function(req, resp){
     server.post('/login-checker', function(req, resp) {
         let userEmail = req.body.email;
         let userPassword = req.body.password;
-         req.session.curUserMail = req.body.email;
+        req.session.curUserMail = req.body.email;
 
         responder.getUser(userEmail, userPassword)
         .then(user => {
             if (user != null){
+                responder.addLogs(userEmail, user.role, `User Login succesfully`, "Success");
                 req.session.isAuth = true;
                 
                 if(req.body.remember != 'on'){
@@ -194,6 +206,7 @@ server.post('/register-checker', function(req, resp){
                 resp.redirect('/mainMenu');
  
             } else {
+                responder.addLogs(userEmail, "N/A", `User Login Failed`, "Fail");
                 resp.render('login',{
                     layout: 'loginIndex',
                     title: 'Login Page',
@@ -302,6 +315,9 @@ server.get('/mainMenu', isAuth, function(req, resp) {
 
 // delete profile
 server.post('/deleteProfile', function(req, resp){
+    responder.getUserByEmail(req.session.curUserMail).then(user=> {
+        responder.addLogs(req.session.curUserMail, user.role, `User Deleted.`, "Success");
+    });
     responder.deleteProfile(req.session.curUserMail).then(function(){
         console.log("Profile delete success");
         req.session.destroy((err) => {
@@ -371,6 +387,9 @@ server.get('/edit-profile', isAuth, function(req, resp) {
 })
 
 server.post('/deleteProfile', function(req, resp){
+    responder.getUserByEmail(req.session.curUserMail).then(user=> {
+        responder.addLogs(req.session.curUserMail, user.role, `User Deleted.`, "Success");
+    });
     responder.deleteProfile( req.session.curUserMail).then(function(){
         console.log("Profile delete success");
         resp.redirect("/");
@@ -466,6 +485,11 @@ server.post('/change_username', function(req, resp){
     var username  = String(req.body.username);
     var email =  req.session.curUserData.email;
 
+    responder.getUserByEmail(req.session.curUserMail).then(user=> {
+        responder.addLogs(req.session.curUserMail, user.role,
+             `Username Changed from ${user.username} to ${username}`, "Success");
+    });
+
     responder.changeUsername( req.session.curUserData.email,req.body.username)
     .then(booleanValue=>{
         if(booleanValue == true){
@@ -477,6 +501,7 @@ server.post('/change_username', function(req, resp){
             resp.send({username : username});
         } else{
             console.log("UsernameChangeFail");
+            responder.addLogs(req.session.curUserMail, user.role,`Username Changed failed.`, "Fail");
         }
     })
 });
@@ -487,15 +512,19 @@ server.post('/change_password', function(req, resp){
     var password = String(req.body.password);
     var vpassword = String(req.body.vpassword);
 
-    responder.changePassword( req.session.curUserData.email,req.body.password,req.body.vpassword)
-    .then(booleanValue =>{
-        if(booleanValue == true){
-            console.log("PasswordChangeSuccess");
-            resp.send({message : "Password Change Success!"});
-        } else{
-            console.log("PasswordChangeFail");
-            resp.send({message : "Password Change Failed!"});
-        }
+    responder.getUserByEmail(req.session.curUserMail).then(user=> {
+        responder.changePassword( req.session.curUserData.email,req.body.password,req.body.vpassword)
+        .then(booleanValue =>{
+            if(booleanValue == true){
+                responder.addLogs(req.session.curUserMail, user.role,`User Password Changed Successfully`, "Success");
+                console.log("PasswordChangeSuccess");
+                resp.send({message : "Password Change Success!"});
+            } else{
+                responder.addLogs(req.session.curUserMail, user.role,`User Password Change Failed`, "Fail");
+                console.log("PasswordChangeFail");
+                resp.send({message : "Password Change Failed!"});
+            }
+        });
     });
 });
 
@@ -743,43 +772,45 @@ server.post('/reserve', function(req, resp){
     .then(user=>{
         responder.getUserByEmail( req.body.email)
         .then(reserving => {
+            var seat  = String(req.body.seat);
+            var room  = String(req.body.room);
+            var timeFrame  = String(req.body.timeFrame);
+            var anon = req.body.anon == 'true';
+            var resDate = req.body.date;
+            var walkin = user.role == "admin" || user.role == "roleA";
+            var name;
 
-            if(reserving){
-                var seat  = String(req.body.seat);
-                var room  = String(req.body.room);
-                var timeFrame  = String(req.body.timeFrame);
-                var anon = req.body.anon == 'true';
-                var resDate = req.body.date;
-                var walkin = user.role == "admin" || user.role == "roleA";
-                var name;
-
-                if(walkin){
-                    console.log(reserving.username);
-                    name = reserving.username;
-                    responder.addReservation(date+ "|" +time, name, req.body.email, resDate, seat, room, timeFrame, anon, walkin)
-                }else{
-                    name = user.username;
-                    responder.addReservation(date+ "|" +time, name, user.email, resDate, seat, room, timeFrame, anon, walkin)
+            if(walkin){
+                if(reserving == null){
+                    responder.addLogs(req.session.curUserMail, user.role,`User reserve failed unkown email used`, "Fail");
+                    resp.send({status: "failed", reserve: null});
+                    return;
                 }
-
-                    let obj = {
-                        dateTime: date+ "|" +time,
-                        name: name,
-                        email: req.body.email,
-                        bookDate: resDate,
-                        seat: seat,
-                        room: room,
-                        timeFrame: timeFrame,
-                        anon: anon,
-                        status: "active",
-                        isWalkin: walkin,
-                    };
-
-                    resp.send({status: "reserved", reserve: obj});
+                name = reserving.username;
+                responder.addLogs(req.session.curUserMail, user.role,`User reserved for ${reserving.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");
+                responder.addReservation(date+ "|" +time, name, req.body.email, resDate, seat, room, timeFrame, anon, walkin)
             }else{
-                resp.send({status: "failed", reserve: null});
+                responder.addLogs(req.session.curUserMail, user.role,`User reserved for ${user.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");
+                name = user.username;
+                responder.addReservation(date+ "|" +time, name, user.email, resDate, seat, room, timeFrame, anon, walkin)
             }
-            
+
+                let obj = {
+                    dateTime: date+ "|" +time,
+                    name: name,
+                    email: req.body.email,
+                    bookDate: resDate,
+                    seat: seat,
+                    room: room,
+                    timeFrame: timeFrame,
+                    anon: anon,
+                    status: "active",
+                    isWalkin: walkin,
+                };
+                console.log(obj);
+
+                resp.send({status: "reserved", reserve: obj});
+              
         });                
     })
     .catch(error => {
@@ -998,12 +1029,11 @@ function sortByStartTime(array) {
 }
 
 server.post('/save-profile', function(req, resp){
-
     responder.updateProfile( req.session.curUserData.email, req.body.username, req.body.password, req.body['prof-pic'], req.body.bio)
     .then(whatever => {
-
         responder.getUserByEmail( req.session.curUserData.email)
         .then(user => {
+            responder.addLogs(req.session.curUserMail, user.role,`Profile Saved`, "Success");
              req.session.curUserData = user;
             resp.redirect('/profile')
         })
@@ -1052,17 +1082,27 @@ server.get('/editReservation', isAuth, function (req, resp) {
 server.post('/removeReservation', function (req, resp) {
     responder.removeReservation(req.body.date, req.body.timeFrame, req.body.seat, req.body.room)
     .then(result =>{
+        responder.getUserByEmail(req.session.curUserMail).then(user=> {
+            responder.addLogs(req.session.curUserMail, user.role,`Reservation Removed successfully seat:${req.body.seat} room:${req.body.room}`, "Success");
+        });
+        
         console.log('success update reservation');
         resp.send({stats: 'success'});
     })
     .catch(error => {
+        responder.getUserByEmail(req.session.curUserMail).then(user=> {
+            responder.addLogs(req.session.curUserMail, user.role,`Reservation Removed Failed seat:${req.body.seat} room:${req.body.room}`, "Fail");
+        });
         console.error(error);
     });
 });
 
 server.get('/logout', function (req, resp) {
+    const userEmail = req.session.curUserMail;
+    responder.getUserByEmail(userEmail).then(user=> {
+        responder.addLogs(userEmail, user.role,`User logout`, "Success");
+    });
      req.session.curUserData = null;
-    
     req.session.destroy((err) => {
         if(err) throw err;
         resp.redirect('/');
@@ -1089,9 +1129,15 @@ server.post('/addTimeFrame', function(req, resp){
             }
 
             if(valid){
+                responder.getUserByEmail(req.session.curUserMail).then(user=> {
+                    responder.addLogs(req.session.curUserMail, user.role,`User added new time frame room:${curLab.roomNum} timestart:${timeStart} timeend:${timeEnd} date${date}`, "Success");
+                });
                 responder.addSchedule(timeStart, timeEnd, date, curLab.roomNum, curLab.seats * curLab.numCols)
                 resp.send({stat: "success"});
             }else{
+                responder.getUserByEmail(req.session.curUserMail).then(user=> {
+                    responder.addLogs(req.session.curUserMail, user.role,`User failed adding new time frame room:${curLab.roomNum} timestart:${timeStart} timeend:${timeEnd} date${date}`, "Fail");
+                });
                 resp.send({stat: "fail"});
             }
         })
@@ -1104,9 +1150,12 @@ server.post("/deleteTimeFrame", function(req, resp){
     const date = req.body.date;
     const timeStart = req.body.timeStart;
     const timeEnd = req.body.timeEnd;
-
+    
     responder.getLabById( req.session.curLabId)
     .then(curLab => {
+        responder.getUserByEmail(req.session.curUserMail).then(user=> {
+            responder.addLogs(req.session.curUserMail, user.role,`Lab ${curLab.roomNum} timesFrame ${timeStart}-${timeEnd} Deleted`, "Success");
+        });
         responder.removeTimeFrame(timeStart, timeEnd, date, curLab.roomNum);
         resp.send({stat: "success"});
     })
@@ -1269,8 +1318,10 @@ server.post('/assign_role', function(req, resp){
             responder.updateRole(email, newRole)
             .then(result => {
                 if(result){
+                    responder.addLogs(req.session.curUserMail, user.role,`User assigned new role: ${newRole} to user ${email}`, "Success");
                     resp.send({status: "success"});
                 }else{
+                    responder.addLogs(req.session.curUserMail, user.role,`User Failed to assign new role: ${newRole} to user ${email}`, "Fail");
                     resp.send({status: "error"});
                 }
             });
@@ -1291,8 +1342,14 @@ server.post('/deleteUser', function(req, resp){
     responder.deleteProfile( req.body.email)
     .then(result => {
         if(result){
+            responder.getUserByEmail(req.session.curUserMail).then(user=> {
+                responder.addLogs(req.session.curUserMail, user.role,`User deleted user ${req.body.email}`, "Success");
+            });
             resp.send({status: "success"});
         }else{
+            responder.getUserByEmail(req.session.curUserMail).then(user=> {
+                responder.addLogs(req.session.curUserMail, user.role,`User failed to deleted user ${req.body.email}`, "Fail");
+            });
             resp.send({status: "error"});
         }
     });
