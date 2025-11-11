@@ -5,7 +5,6 @@
     </div>
     <div id="button-container">
         <div id="add-user-button" onclick="window.location.href='/register'">Add User</div>
-        <div id="save-button">Save</div>
     </div>
     
     <div class="userListContainer">
@@ -24,9 +23,14 @@
                     <td>{{email}}</td>
                     <td>{{username}}</td>
                     <td>{{role}}</td>
-                    <td><input class="assign-button" id="{{email}}" type="submit" value="Assign"> 
-                        <input class="delete-button"  id="{{email}}" type="submit" value="Delete"></th>
-                </tr>
+                    <td>
+                        <div id="action-container">
+                            <input class="assign-button" id="{{email}}" type="submit" value="Assign"> 
+                            <input class="delete-button"  id="{{email}}" type="submit" value="Delete">
+                        </div>
+                    </td>
+                    
+                    </tr>
             {{/each}}
         </tbody>
 

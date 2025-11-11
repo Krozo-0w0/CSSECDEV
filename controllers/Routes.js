@@ -3,6 +3,7 @@ const { timeEnd, info } = require('console');
 const responder = require('../models/Responder');
 const fs = require('fs');
 const session = require('express-session');
+const { resourceLimits } = require('worker_threads');
 
 
 
@@ -773,9 +774,6 @@ server.post('/reserve', function(req, resp){
     .catch(error => {
         console.error(error);
     });
-
-    
-    
 });
 
 server.post('/getTimeFrames', function(req, resp){
@@ -949,9 +947,6 @@ server.get('/manageRoles', isAuth, function(req, resp){
     });
 });
 
-function getRole(){
-    
-}
 
 server.post('/changeModifyLab', function(req, resp){
     responder.getLabById( req.session.curLabId)
@@ -1089,9 +1084,6 @@ server.post('/addTimeFrame', function(req, resp){
                 resp.send({stat: "fail"});
             }
         })
-
-
-
     })
 
 
@@ -1249,6 +1241,52 @@ function isTimeOutsideFrame(time, startTime, endTime) {
         return false; // Time falls outside the frame
     }
 }
+
+server.post('/assign_role', function(req, resp){
+    const email = req.body.email;
+    const newRole = req.body.role;
+
+    console.log(email);
+    console.log(newRole);
+
+    responder.getUserByEmail( req.session.curUserMail)
+    .then(user=>{
+
+    responder.getUserByEmail(req.session.curUserMail)
+    .then(curuser => {
+        if(curuser.role == "admin"){
+            responder.updateRole(email, newRole)
+            .then(result => {
+                if(result){
+                    resp.send({status: "success"});
+                }else{
+                    resp.send({status: "error"});
+                }
+            });
+        }else if (curuser.role == "roleA"){
+            //only can modify specific roles
+        }else{
+            //error
+        }
+    });
+
+    })
+    .catch(error => {
+        console.error(error);
+    });
+});
+
+server.post('/deleteUser', function(req, resp){
+    responder.deleteProfile( req.body.email)
+    .then(result => {
+        if(result){
+            resp.send({status: "success"});
+        }else{
+            resp.send({status: "error"});
+        }
+    });
+});
+
 
 /************************no need to edit past this point********************************* */
 }

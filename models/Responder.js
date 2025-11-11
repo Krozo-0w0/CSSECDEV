@@ -443,7 +443,7 @@ function deleteProfile(myEmail) {
     return new Promise((resolve, reject) => {
         colU.deleteOne(searchQuery).then(function(){
             colR.deleteMany(searchQuery).then(function(){
-                resolve();
+                resolve(true);
             }).catch(errorFn);
         }).catch(errorFn);
     });
@@ -825,7 +825,25 @@ function tagSearch(searchString) {
 
 module.exports.tagSearch = tagSearch;
 
+function updateRole(email,role){
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
 
+    const updateQuery = { email : email};
+    const updateValues = { $set: {role : role}};
+
+    return new Promise((resolve,reject) =>{
+        col.updateOne(updateQuery,updateValues).then(function(res){
+            if(res['modifiedCount'] > 0){
+                resolve(true);
+            } else{
+                resolve(false);
+            }
+
+        });
+    });
+}
+module.exports.updateRole = updateRole;
 
 
 function finalClose(){
