@@ -57,34 +57,61 @@ function isValidEmail(email) {
 
 /******response functions to interact with database**********/
 
-
+//johans - get user function (added lockouts, tracking the number of attempts, and lastlogin) 
 function getUser(userEmail, userPassword) {
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
-    let hashedPassword = null;
-    searchQuery = {email: userEmail};
-    return new Promise((resolve, reject) => {
-        col.findOne(searchQuery).then(function(val){
-            if(val != null){
-                hashedPassword = val.password;
-                bcrypt.compare(userPassword,hashedPassword,function(err,result){
-                    if (result){
-                        resolve(val)
-                    } else{
-                        resolve(null);
-                    }
-                })
-            
-            } else{
-                resolve(null);
-            }
-        });
-    });
+    const MAX_ATTEMPTS = 5;
+    const LOCK_DURATION = 15 * 60 * 1000; // 15 minutes yan
 
+    return new Promise((resolve, reject) => {
+        col.findOne({ email: userEmail }).then(function (user) {
+            if (!user) {
+                resolve(null);
+                return;
+            }
+
+            // this checks if lock or nah
+            if (user.lockUntil && user.lockUntil > Date.now()) {
+                console.log(`Account ${userEmail} is locked until ${user.lockUntil}`);
+                resolve({ locked: true });
+                return;
+            }
+
+            bcrypt.compare(userPassword, user.password, function (err, result) {
+                if (result) {
+                    // if successful = failed attempts resets and unlocked while also updating last login
+                    col.updateOne(
+                        { email: userEmail },
+                        { $set: { failedAttempts: 0, lockUntil: null, lastLogin: new Date(), lastLoginStatus: "Success"} }
+                    );
+                    resolve(user);
+                } else {
+                    let attempts = (user.failedAttempts || 0) + 1;
+                    let update = { failedAttempts: attempts, lastLogin: new Date(), lastLoginStatus: "Fail" };
+                    
+                    // If max attempts = goodbye! lock the account lol
+                    if (attempts >= MAX_ATTEMPTS) {
+                        update.lockUntil = new Date(Date.now() + LOCK_DURATION);
+                        console.log(`Account ${userEmail} locked for 15 minutes.`);
+                    }
+
+                    col.updateOne({ email: userEmail }, { $set: update });
+                    resolve(null);
+                }
+            });
+        }).catch(reject);
+    });
 }
 module.exports.getUser = getUser;
 
+//johans - strong password function
+function isStrongPassword(password) {
+    const policyRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return policyRegex.test(password);
+}
 
+//johans - add user function (edited for strong password, lockout mechanism, and lastLogin)
 function addUser(userEmail, userName, userPassword, userVPassword, role){
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
@@ -96,10 +123,12 @@ function addUser(userEmail, userName, userPassword, userVPassword, role){
             console.log(userVPassword);
             if (val != null){
                 resolve('Email already in use.');
-            } else if (userPassword != userVPassword){
+            } else if (userPassword !== userVPassword) {
                 resolve('Passwords do not match.');
-            } else if (!isValidEmail(userEmail)){
+            } else if (!isValidEmail(userEmail)) {
                 resolve('Invalid DLSU email format.');
+            } else if (!isStrongPassword(userPassword)) {
+                resolve('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
             } else {
                 bcrypt.hash(userPassword, saltRounds, function(err, hash) {
                     userPassword = hash;
@@ -110,6 +139,11 @@ function addUser(userEmail, userName, userPassword, userVPassword, role){
                         pfp: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
                         username: userName,
                         bio: "",
+                        failedAttempts: 0,
+                        lockUntil: null,
+                        lastPasswordChange: new Date(),
+                        lastLogin: null,
+                        lastLoginStatus: null
                     };
                     col.insertOne(info).then(function(res){
                     }).catch(errorFn);
@@ -293,26 +327,34 @@ function getUserByName(name) {
 }
 module.exports.getUserByName = getUserByName;
 
-function changePassword(userEmail,password,vpassword){
+//johans - change password function (edited for strong password)
+function changePassword(userEmail, password, vpassword) {
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
 
     const updateQuery = { email: userEmail };
-    const updateValues = { $set: {password : password}};
 
     return new Promise((resolve, reject) => {
-        if(password === vpassword){
-            col.updateOne(updateQuery,updateValues).then(function(res){
-                if(res['modifiedCount'] > 0){
-                    resolve(true);
-                } else{
-                    resolve(false);
-                }
-            });
-        } else{
+        if (password !== vpassword) {
             resolve(false);
+            return;
         }
-    })
+        if (!isStrongPassword(password)) {
+            resolve(false);
+            return;
+        }
+
+        bcrypt.hash(password, saltRounds, function(err, hash) {
+            if (err) {
+                reject(err);
+            } else {
+                const updateValues = { $set: { password: hash } };
+                col.updateOne(updateQuery, updateValues)
+                   .then(res => resolve(res.modifiedCount > 0))
+                   .catch(reject);
+            }
+        });
+    });
 }
 module.exports.changePassword = changePassword;
 

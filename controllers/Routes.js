@@ -185,7 +185,7 @@ server.post('/register-checker', function(req, resp){
 });
 
 
-
+// johans - added lockout checker; if else lang yun
 // CHECK-LOGIN check if login info is valid, success => redirects to main page, failure => rerender page
     server.post('/login-checker', function(req, resp) {
         let userEmail = req.body.email;
@@ -194,7 +194,7 @@ server.post('/register-checker', function(req, resp){
 
         responder.getUser(userEmail, userPassword)
         .then(user => {
-            if (user != null){
+            if (user && !user.locked){
                 responder.addLogs(userEmail, user.role, `User Login succesfully`, "Success");
                 req.session.isAuth = true;
                 
@@ -202,9 +202,18 @@ server.post('/register-checker', function(req, resp){
                     req.session.cookie.expires = false; 
                 }
 
+                req.session.lastLoginTime = user.lastLogin;
+                req.session.lastLoginStatus = user.lastLoginStatus;
                 req.session.curUserData = user;
                 resp.redirect('/mainMenu');
  
+            } else if (user && user.locked){
+                responder.addLogs(userEmail, "N/A", `Account locked due to too many failed attempts`, "Fail");
+                resp.render('login', {
+                    layout: 'loginIndex',
+                    title: 'Login Page',
+                    errMsg: 'Account locked. Please try again after 15 minutes.'
+                });
             } else {
                 responder.addLogs(userEmail, "N/A", `User Login Failed`, "Fail");
                 resp.render('login',{
@@ -258,7 +267,12 @@ server.get('/about', isAuth, function(req, resp) {
 // MAIN MENU 
 server.get('/mainMenu', isAuth, function(req, resp) {
     req.session.isLabs = true;
-    
+
+    const showLoginStatus = req.session.showLoginStatus;
+    const lastLoginInfo = req.session.lastLoginInfo;
+
+    req.session.showLoginStatus = false;
+
     responder.getUserByEmail(req.session.curUserMail)
     .then(name => {
         if(req.query.labs != null){
@@ -268,9 +282,10 @@ server.get('/mainMenu', isAuth, function(req, resp) {
                 layout: 'mainMenuIndex',
                 title: 'Main Menu',
                 labs: labs,
-                user:  req.session.curUserData
+                user:  req.session.curUserData,
             });
         } else{
+    
         // get lab data for display
         req.session.searchQuery = null;
         responder.getLabs()
@@ -1355,6 +1370,13 @@ server.post('/deleteUser', function(req, resp){
     });
 });
 
+//johans - forgot password route
+server.get('/forgot-password', function(req, res) {
+  res.render('forgot-password', {
+    layout: 'loginIndex',
+    title: 'Forgot Password'
+  });
+});
 
 /************************no need to edit past this point********************************* */
 }
