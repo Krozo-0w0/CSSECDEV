@@ -146,7 +146,7 @@ server.post('/password_checker', function(req, resp){
     }
 });
 
-
+//johans - add security questions 
 // CHECK-REGISTER check if register info is valid, success => redirects to login, failure => rerender page
 server.post('/register-checker', function(req, resp){
     var userEmail  = String(req.body.email);
@@ -157,6 +157,30 @@ server.post('/register-checker', function(req, resp){
     var isRoleA = String(req.body.role == "roleA");
     var role = "roleB";
 
+    const securityQuestions = [
+        {
+            question: req.body.securityQuestion1,
+            answer: req.body.securityAnswer1
+        },
+        {
+            question: req.body.securityQuestion2,
+            answer: req.body.securityAnswer2
+        },
+        {
+            question: req.body.securityQuestion3,
+            answer: req.body.securityAnswer3
+        }
+    ];
+
+    const questionSet = new Set(securityQuestions.map(q => q.question));
+    if (questionSet.size !== 3) {
+        return resp.render('register',{
+            layout: 'registerIndex',
+            title: 'Register Page',
+            emailErrMsg: 'Please select 3 distinct security questions.'
+        });
+    }
+
     if(isTechnician === 'on'){
         role = "admin";
     } 
@@ -165,7 +189,7 @@ server.post('/register-checker', function(req, resp){
         role = "roleA";
     } 
 
-    responder.addUser(userEmail, userName, userPassword, userVPassword, role)
+    responder.addUser(userEmail, userName, userPassword, userVPassword, role, securityQuestions)
     .then(result => {
         if (result == "Success!"){
             responder.addLogs(userEmail, role, `Success create new account.`, "Success");
@@ -1377,6 +1401,237 @@ server.get('/forgot-password', function(req, res) {
     title: 'Forgot Password'
   });
 });
+
+//johans - forgot password initiation
+server.post('/forgot-password-init', async function(req, res) {
+  const email = req.body.email;
+  
+  try {
+    const user = await responder.getUserByEmail(email);
+    if (!user) {
+      return res.render('forgot-password', {
+        layout: 'loginIndex',
+        title: 'Forgot Password',
+        errMsg: 'Email not found. Please check your email address.'
+      });
+    }
+
+    if (!user.securityQuestions || user.securityQuestions.length < 2) {
+      return res.render('forgot-password', {
+        layout: 'loginIndex',
+        title: 'Forgot Password',
+        errMsg: 'No security questions set for this account. Please contact administrator.'
+      });
+    }
+
+    // Check if account is locked due to too many attempts
+    if (user.passwordResetLockUntil && user.passwordResetLockUntil > Date.now()) {
+      const lockTime = Math.ceil((user.passwordResetLockUntil - Date.now()) / (1000 * 60));
+      return res.render('forgot-password', {
+        layout: 'loginIndex',
+        title: 'Forgot Password',
+        errMsg: `Account temporarily locked. Please try again in ${lockTime} minutes.`
+      });
+    }
+
+    // Select 2 random security questions
+    const randomQuestions = user.securityQuestions
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 2);
+
+    // Generate temporary token
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const tokenExpiry = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    // Store token and questions in session or temporary storage
+    req.session.passwordReset = {
+      email: email,
+      token: token,
+      questions: randomQuestions,
+      tokenExpiry: tokenExpiry,
+      attempts: 0
+    };
+
+    res.render('forgot-password-questions', {
+      layout: 'loginIndex',
+      title: 'Security Questions',
+      email: email,
+      token: token,
+      securityQuestions: randomQuestions,
+      attemptsRemaining: 3 - req.session.passwordReset.attempts
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.render('forgot-password', {
+      layout: 'loginIndex',
+      title: 'Forgot Password',
+      errMsg: 'An error occurred. Please try again.'
+    });
+  }
+});
+
+server.post('/forgot-password-verify', async function(req, res) {
+  const { email, token, securityAnswers } = req.body;
+  const resetData = req.session.passwordReset;
+
+  // Validate session data
+  if (!resetData || resetData.email !== email || resetData.token !== token) {
+    return res.redirect('/forgot-password');
+  }
+
+  // Check token expiry
+  if (Date.now() > resetData.tokenExpiry) {
+    req.session.passwordReset = null;
+    return res.render('forgot-password', {
+      layout: 'loginIndex',
+      title: 'Forgot Password',
+      errMsg: 'Security token expired. Please start over.'
+    });
+  }
+
+  // Check attempt limit
+  if (resetData.attempts >= 3) {
+    // Lock the account for 15 minutes
+    await responder.lockPasswordReset(email, 15 * 60 * 1000);
+    req.session.passwordReset = null;
+    
+    return res.render('forgot-password', {
+      layout: 'loginIndex',
+      title: 'Forgot Password',
+      errMsg: 'Too many failed attempts. Account locked for 15 minutes.'
+    });
+  }
+
+  try {
+    const user = await responder.getUserByEmail(email);
+    const providedAnswers = Array.isArray(securityAnswers) ? securityAnswers : [securityAnswers];
+    
+    // Verify answers
+    const isVerified = await responder.verifySecurityQuestionsForReset(email, resetData.questions, providedAnswers);
+    
+    if (isVerified) {
+      // Answers correct - proceed to password reset
+      req.session.passwordReset.verified = true;
+      req.session.passwordReset.verifiedAt = Date.now();
+      
+      res.render('forgot-password-reset', {
+        layout: 'loginIndex',
+        title: 'Reset Password',
+        email: email,
+        token: token
+      });
+    } else {
+      // Answers incorrect
+      req.session.passwordReset.attempts++;
+      
+      res.render('forgot-password-questions', {
+        layout: 'loginIndex',
+        title: 'Security Questions',
+        email: email,
+        token: token,
+        securityQuestions: resetData.questions,
+        attemptsRemaining: 3 - req.session.passwordReset.attempts,
+        errMsg: 'One or more answers are incorrect. Please try again.'
+      });
+    }
+  } catch (error) {
+    console.error('Security questions verification error:', error);
+    res.render('forgot-password', {
+      layout: 'loginIndex',
+      title: 'Forgot Password',
+      errMsg: 'An error occurred. Please try again.'
+    });
+  }
+});
+
+//johans - Forgot Password - Reset password
+server.post('/forgot-password-reset', async function(req, res) {
+  const { email, token, newPassword, confirmPassword } = req.body;
+  const resetData = req.session.passwordReset;
+
+  // Validate session and verification
+  if (!resetData || !resetData.verified || resetData.email !== email || resetData.token !== token) {
+    return res.redirect('/forgot-password');
+  }
+
+  // chinecheck verification was done within last 10 minutes
+  if (Date.now() - resetData.verifiedAt > 10 * 60 * 1000) {
+    req.session.passwordReset = null;
+    return res.render('forgot-password', {
+      layout: 'loginIndex',
+      title: 'Forgot Password',
+      errMsg: 'Reset session expired. Please start over.'
+    });
+  }
+
+  try {
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      return res.render('forgot-password-reset', {
+        layout: 'loginIndex',
+        title: 'Reset Password',
+        email: email,
+        token: token,
+        errMsg: 'Passwords do not match.'
+      });
+    }
+
+    // Check password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.render('forgot-password-reset', {
+        layout: 'loginIndex',
+        title: 'Reset Password',
+        email: email,
+        token: token,
+        errMsg: 'Password does not meet strength requirements.'
+      });
+    }
+
+    // ichecheck password reuse and change frequency
+    const canChangePassword = await responder.canChangePassword(email, newPassword);
+    if (!canChangePassword.allowed) {
+      return res.render('forgot-password-reset', {
+        layout: 'loginIndex',
+        title: 'Reset Password',
+        email: email,
+        token: token,
+        errMsg: canChangePassword.reason
+      });
+    }
+
+    // Update yung password
+    const success = await responder.updatePasswordWithHistory(email, newPassword);
+    
+    if (success) {
+      // Clear ang reset session
+      req.session.passwordReset = null;
+      
+      // Log the action
+      await responder.addLogs(email, 'user', 'Password reset via forgot password', 'Success');
+      
+      res.render('login', {
+        layout: 'loginIndex',
+        title: 'Login',
+        errMsg: 'Password reset successful. Please login with your new password.'
+      });
+    } else {
+      throw new Error('Password update failed');
+    }
+
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.render('forgot-password-reset', {
+      layout: 'loginIndex',
+      title: 'Reset Password',
+      email: email,
+      token: token,
+      errMsg: 'An error occurred during password reset. Please try again.'
+    });
+  }
+});
+
 
 /************************no need to edit past this point********************************* */
 }
