@@ -13,7 +13,7 @@
 }
 
 .childContainer{
-    height: 560px;
+    height: 850px;
     width: 500px;
     display: block;
     justify-content: center;
@@ -51,4 +51,102 @@
 
 #vPasswordErrorContainer{
     color: white;
+}
+
+/* Forgot Password Specific Styles */
+.attempts-info {
+    color: #e74c3c;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding: 8px 12px;
+    background-color: #fdf2f2;
+    border-radius: 6px;
+    border-left: 4px solid #e74c3c;
+}
+
+.question-label {
+    display: block;
+    text-align: left;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95em;
+}
+
+.password-requirements {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    text-align: left;
+}
+
+.password-requirements h4 {
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.password-requirements ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.password-requirements li {
+    padding: 5px 0;
+    color: #6c757d;
+    transition: color 0.3s ease;
+}
+
+.password-requirements li.valid {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.password-requirements li.invalid {
+    color: #e74c3c;
+}
+
+.password-strength, .password-match {
+    margin: 5px 0;
+    font-size: 0.85em;
+    text-align: left;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.password-strength.weak { color: #e74c3c; background-color: #fdf2f2; }
+.password-strength.medium { color: #f39c12; background-color: #fef9e7; }
+.password-strength.strong { color: #27ae60; background-color: #f2fdf2; }
+
+.password-match.valid { color: #27ae60; background-color: #f2fdf2; }
+.password-match.invalid { color: #e74c3c; background-color: #fdf2f2; }
+
+.lockout-message {
+    color: #e74c3c;
+    background-color: #fdf2f2;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #e74c3c;
+    margin: 15px 0;
+}
+
+.cooldown-timer {
+    font-weight: 600;
+    color: #e74c3c;
+}
+
+/* Loading state */
+.button:disabled {
+    background-color: #bdc3c7;
+    border-color: #bdc3c7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.button:disabled:hover {
+    background-color: #bdc3c7;
+    border-color: #bdc3c7;
+    transform: none;
+    box-shadow: none;
 }

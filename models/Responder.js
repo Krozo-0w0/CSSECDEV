@@ -78,6 +78,13 @@ function getUser(userEmail, userPassword) {
                 return;
             }
 
+            if (user.lockUntil && user.lockUntil <= Date.now()) {
+                col.updateOne(
+                    { email: userEmail },
+                    { $set: { lockUntil: null, failedAttempts: 0 } }
+                );
+            }
+
             bcrypt.compare(userPassword, user.password, function (err, result) {
                 if (result) {
                     // if successful = failed attempts resets and unlocked while also updating last login
@@ -112,7 +119,7 @@ function isStrongPassword(password) {
 }
 
 //johans - add user function (edited for strong password, lockout mechanism, and lastLogin)
-function addUser(userEmail, userName, userPassword, userVPassword, role){
+function addUser(userEmail, userName, userPassword, userVPassword, role, securityQuestions){
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
     searchQuery = {email: userEmail};
@@ -132,22 +139,43 @@ function addUser(userEmail, userName, userPassword, userVPassword, role){
             } else {
                 bcrypt.hash(userPassword, saltRounds, function(err, hash) {
                     userPassword = hash;
-                    const info = {
-                        email: userEmail,
-                        password: userPassword,
-                        role: role,
-                        pfp: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
-                        username: userName,
-                        bio: "",
-                        failedAttempts: 0,
-                        lockUntil: null,
-                        lastPasswordChange: new Date(),
-                        lastLogin: null,
-                        lastLoginStatus: null
-                    };
-                    col.insertOne(info).then(function(res){
-                    }).catch(errorFn);
-                    resolve('Success!');
+                
+                    const hashedSecurityQuestions = [];
+                    let questionsProcessed = 0;
+
+                    securityQuestions.forEach((qa, index) => {
+                        bcrypt.hash(qa.answer.toLowerCase().trim(), saltRounds, function(err, answerHash) {
+                            hashedSecurityQuestions.push({
+                                question: qa.question,
+                                answer: answerHash
+                            });
+                            
+                            questionsProcessed++;
+
+                            if (questionsProcessed === securityQuestions.length) {
+                                const info = {
+                                    email: userEmail,
+                                    password: userPassword,
+                                    role: role,
+                                    pfp: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
+                                    username: userName,
+                                    bio: "",
+                                    failedAttempts: 0,
+                                    lockUntil: null,
+                                    lastPasswordChange: new Date(),
+                                    lastLogin: null,
+                                    lastLoginStatus: null,
+                                    securityQuestions: hashedSecurityQuestions,
+                                    passwordHistory: [],
+                                    passwordResetAttempts: 0,
+                                    passwordResetLockUntil: null,
+                                };
+                                col.insertOne(info).then(function(res){
+                                }).catch(errorFn);
+                                resolve('Success!');
+                            }
+                        });
+                    });
                 });
             }
         }).catch(reject);
@@ -918,7 +946,226 @@ function getCurrentDate() {
     return dateTime;
 }
 
+function verifySecurityQuestions(email, providedAnswers) {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
 
+    return new Promise((resolve, reject) => {
+        col.findOne({ email: email }).then(function(user) {
+            if (!user || !user.securityQuestions) {
+                resolve(false);
+                return;
+            }
+
+            let correctAnswers = 0;
+            let questionsVerified = 0;
+
+            user.securityQuestions.forEach((storedQA, index) => {
+                const providedAnswer = providedAnswers[index];
+                if (!providedAnswer) {
+                    questionsVerified++;
+                    if (questionsVerified === user.securityQuestions.length) {
+                        resolve(correctAnswers === user.securityQuestions.length);
+                    }
+                    return;
+                }
+
+                bcrypt.compare(providedAnswer.answer.toLowerCase().trim(), storedQA.answer, function(err, result) {
+                    if (result && providedAnswer.question === storedQA.question) {
+                        correctAnswers++;
+                    }
+                    
+                    questionsVerified++;
+                    if (questionsVerified === user.securityQuestions.length) {
+                        resolve(correctAnswers === user.securityQuestions.length);
+                    }
+                });
+            });
+        }).catch(reject);
+    });
+}
+module.exports.verifySecurityQuestions = verifySecurityQuestions;
+
+// Verify security questions for password reset
+function verifySecurityQuestionsForReset(email, expectedQuestions, providedAnswers) {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+
+    return new Promise((resolve, reject) => {
+        col.findOne({ email: email }).then(function(user) {
+            if (!user || !user.securityQuestions) {
+                resolve(false);
+                return;
+            }
+
+            let correctAnswers = 0;
+            let questionsVerified = 0;
+
+            expectedQuestions.forEach((expectedQA, index) => {
+                const providedAnswer = providedAnswers[index];
+                if (!providedAnswer) {
+                    questionsVerified++;
+                    if (questionsVerified === expectedQuestions.length) {
+                        resolve(correctAnswers === expectedQuestions.length);
+                    }
+                    return;
+                }
+
+                // Find the corresponding stored question
+                const storedQA = user.securityQuestions.find(qa => qa.question === expectedQA.question);
+                if (!storedQA) {
+                    questionsVerified++;
+                    if (questionsVerified === expectedQuestions.length) {
+                        resolve(correctAnswers === expectedQuestions.length);
+                    }
+                    return;
+                }
+
+                bcrypt.compare(providedAnswer.toLowerCase().trim(), storedQA.answer, function(err, result) {
+                    if (result) {
+                        correctAnswers++;
+                    }
+                    
+                    questionsVerified++;
+                    if (questionsVerified === expectedQuestions.length) {
+                        resolve(correctAnswers === expectedQuestions.length);
+                    }
+                });
+            });
+        }).catch(reject);
+    });
+}
+module.exports.verifySecurityQuestionsForReset = verifySecurityQuestionsForReset;
+
+// Lock password reset attempts
+function lockPasswordReset(email, duration) {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+    
+    const lockUntil = Date.now() + duration;
+    
+    return new Promise((resolve, reject) => {
+        col.updateOne(
+            { email: email },
+            { $set: { passwordResetLockUntil: lockUntil, passwordResetAttempts: 0 } }
+        ).then(res => resolve(res.modifiedCount > 0))
+         .catch(reject);
+    });
+}
+module.exports.lockPasswordReset = lockPasswordReset;
+
+// Check if password can be changed (reuse and timing checks)
+function canChangePassword(email, newPassword) {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            const user = await col.findOne({ email: email });
+            if (!user) {
+                resolve({ allowed: false, reason: 'User not found.' });
+                return;
+            }
+
+            // Check if password is at least 1 day old
+            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            if (user.lastPasswordChange && user.lastPasswordChange > oneDayAgo) {
+                resolve({ 
+                    allowed: false, 
+                    reason: 'Password was recently changed. Please wait at least 24 hours before changing again.' 
+                });
+                return;
+            }
+
+            // Check password history (last 5 passwords)
+            if (user.passwordHistory && user.passwordHistory.length > 0) {
+                // Check against all historical passwords
+                for (let oldHash of user.passwordHistory) {
+                    const isMatch = await new Promise((resolveMatch) => {
+                        bcrypt.compare(newPassword, oldHash, function(err, result) {
+                            resolveMatch(result);
+                        });
+                    });
+                    
+                    if (isMatch) {
+                        resolve({ 
+                            allowed: false, 
+                            reason: 'Cannot reuse previous passwords. Please choose a different password.' 
+                        });
+                        return;
+                    }
+                }
+            }
+
+            const isCurrentMatch = await new Promise((resolveMatch) => {
+                bcrypt.compare(newPassword, user.password, function(err, result) {
+                    resolveMatch(result);
+                });
+            });
+
+            if (isCurrentMatch) {
+                resolve({ 
+                    allowed: false, 
+                    reason: 'New password cannot be the same as current password.' 
+                });
+                return;
+            }
+
+            resolve({ allowed: true });
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+module.exports.canChangePassword = canChangePassword;
+
+// johans - Update password with history tracking
+function updatePasswordWithHistory(email, newPassword) {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+
+    return new Promise((resolve, reject) => {
+        bcrypt.hash(newPassword, saltRounds, function(err, newHash) {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            col.findOne({ email: email }).then(function(user) {
+                if (!user) {
+                    reject(new Error('User not found'));
+                    return;
+                }
+
+                const updateData = {
+                    password: newHash,
+                    lastPasswordChange: new Date(),
+                    passwordResetLockUntil: null,
+                    passwordResetAttempts: 0,
+                    failedAttempts: 0,
+                    lockUntil: null
+                };
+
+                let passwordHistory = user.passwordHistory || [];
+
+                passwordHistory.unshift(user.password);
+                
+                if (passwordHistory.length > 5) {
+                    passwordHistory = passwordHistory.slice(0, 5);
+                }
+                
+                updateData.passwordHistory = passwordHistory;
+
+                col.updateOne(
+                    { email: email },
+                    { $set: updateData }
+                ).then(res => resolve(res.modifiedCount > 0))
+                 .catch(reject);
+            }).catch(reject);
+        });
+    });
+}
+module.exports.updatePasswordWithHistory = updatePasswordWithHistory;
 
 function finalClose(){
     console.log('Close connection at the end!');
