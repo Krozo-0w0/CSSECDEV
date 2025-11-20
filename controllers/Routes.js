@@ -153,8 +153,8 @@ server.post('/register-checker', function(req, resp){
     var userName  = String(req.body.username);
     var userPassword = String(req.body.password);
     var userVPassword = String(req.body.vpassword);
-    var isTechnician = String(req.body.role == "admin");
-    var isRoleA = String(req.body.role == "roleA");
+    var isTechnician = req.body.isTechnician;
+    var isRoleA = req.body.isRoleA;
     var role = "roleB";
 
     const securityQuestions = [

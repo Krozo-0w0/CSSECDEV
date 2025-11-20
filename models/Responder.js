@@ -123,7 +123,6 @@ function addUser(userEmail, userName, userPassword, userVPassword, role, securit
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
     searchQuery = {email: userEmail};
-    var role = "roleB";
     return new Promise((resolve, reject) => {
         col.findOne(searchQuery).then(function(val){
             console.log(userPassword);
