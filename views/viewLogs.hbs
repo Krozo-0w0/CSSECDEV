@@ -1,0 +1,60 @@
+<main class="mod-container">
+    <div class="head-container">
+        <div class="back"><img src="/images/back.png" onclick="redirectRoom()"></div>
+        <div id="manage-Maintitle">Manage All roles</div>
+    </div>
+
+    <form method="GET" action="/logs" class="filter-form">
+    <input type="text" name="email" placeholder="Email">
+
+    <input id="action" type="text" name="action" placeholder="Action">
+
+
+    <select name="role">
+        <option value="">All Roles</option>
+        <option value="admin">Admin</option>
+        <option value="roleA">roleA</option>
+        <option value="roleB">roleB</option>
+    </select>
+
+
+    <select name="status">
+        <option value="">All Status</option>
+        <option value="Success">Success</option>
+        <option value="Fail">Fail</option>
+    </select>
+
+    <input type="date" name="fromDate">
+    <input type="date" name="toDate">
+
+    <button type="submit" id="filterBtn">Filter</button>
+</form>
+
+    <div class="userListContainer">
+        <table class="log-table" id="log-table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>date</th>
+                <th>Role</th>
+                <th>Actions</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each resData}}
+                <tr>
+                    <td>{{email}}</td>
+                    <td>{{date}}</td>
+                    <td>{{role}}</td>
+                    <td>{{action}}</td>
+                    <td>{{status}}</td>
+                    </tr>
+            {{/each}}
+        </tbody>
+
+        </table>
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+</main>

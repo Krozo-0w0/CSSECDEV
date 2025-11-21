@@ -1028,6 +1028,44 @@ server.get('/manageRoles', isAuth, function(req, resp){
     });
 });
 
+server.get('/viewLogs', isAuth, function(req, resp){
+    responder.getUserByEmail(req.session.curUserMail)
+    .then(user => {
+            if(user.role == "admin"){
+                responder.getLogs()
+                .then(logs => {
+                    resp.render('viewLogs', {
+                    layout: 'viewLogs',
+                    title: 'View Logs',
+                    resData: logs
+                });
+            })  
+        }
+    });
+});
+
+server.post('/filterLogs', isAuth, function (req, resp) {
+
+    const { email, action, status, fromDate, toDate, role } = req.body;
+
+    responder.getUserByEmail(req.session.curUserMail)
+        .then(user => {
+            if (user.role === "admin") {
+                responder.filterLogs(email, action, role, status, fromDate, toDate)
+                    .then(logs => {
+                        resp.send({ log: logs });
+                    })
+                    .catch(err => {
+                        console.error("Error filtering logs:", err);
+                        resp.status(500).send({ error: "Server error" });
+                    });
+
+            } else {
+                resp.status(403).send({ error: "Not authorized" });
+            }
+        });
+});
+
 
 server.post('/changeModifyLab', function(req, resp){
     responder.getLabById( req.session.curLabId)

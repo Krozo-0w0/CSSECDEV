@@ -1,11 +1,18 @@
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const { emit } = require('process');
 
 const dotenv = require('dotenv');
 dotenv.config();
 const databaseURL = process.env.MONGODB_URL;
 
-const mongoClient = new MongoClient(databaseURL);
+const mongoClient = new MongoClient(databaseURL, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+
 const bcrypt = require('bcrypt')
 const saltRounds = 10;
 
@@ -111,6 +118,51 @@ function getUser(userEmail, userPassword) {
     });
 }
 module.exports.getUser = getUser;
+
+
+function getLogs() {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colLogs);
+    return new Promise((resolve, reject) => {
+        const cursor = col.find({});
+        cursor.toArray().then(function(vals){
+            resolve(vals);
+        }).catch(errorFn);
+        
+    });
+}
+module.exports.getLogs = getLogs;
+
+
+function filterLogs(email, action, role, status, fromDate, toDate) {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colLogs);
+
+    const filter = {};
+
+    // Dynamic filters
+    if (email) filter.email = { $regex: email, $options: "i" };
+    if (action) filter.action = { $regex: action, $options: "i" };
+    if (role) filter.role = role;
+    if (status) filter.status = status;
+
+    // Date range
+    if (fromDate || toDate) {
+        filter.date = {};
+        if (fromDate) filter.date.$gte = fromDate + " 00:00:00";
+        if (toDate) filter.date.$lte = toDate + " 23:59:59";
+    }
+
+    return new Promise((resolve, reject) => {
+        col.find(filter)
+            .sort({ date: -1 })
+            .toArray()
+            .then(resolve)
+            .catch(reject);
+    });
+}
+
+module.exports.filterLogs = filterLogs;
 
 //johans - strong password function
 function isStrongPassword(password) {
@@ -1177,3 +1229,4 @@ process.on('SIGINT',finalClose);   //catches when ctrl + c is used
 process.on('SIGQUIT', finalClose); //catches other termination commands
 
 
+    
