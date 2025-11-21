@@ -7,8 +7,10 @@
                     <td class="col2"><input name="username" type="text" class="input" id="username" value="{{user.username}}"></td>
                 </tr>
                 <tr>
-                    <td><label for="password">New Password (leave blank if no change)</label></td>
-                    <td class="col2"><input name="password" type="text" class="input" id="password" value=""></td>
+                <td><label>Password</label></td>
+                <td class="col2">
+                    <button type="button" id="changePasswordBtn" class="button">Change Password</button>
+                </td>
                 </tr>
                 <tr>
                     <td><label for="prof-pic">Profile Picture</label></td>
@@ -22,3 +24,9 @@
             <input type="submit" id="submit" value="Save">
         </form>
     </main>
+
+<script>
+document.getElementById('changePasswordBtn').addEventListener('click', function() {
+    window.location.href = '/change-password-flow';
+});
+</script>
