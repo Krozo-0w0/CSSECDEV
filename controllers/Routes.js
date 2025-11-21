@@ -1670,6 +1670,176 @@ server.post('/forgot-password-reset', async function(req, res) {
   }
 });
 
+// CHANGE PASSWORD FLOW - For authenticated users
+server.get('/change-password-flow', isAuth, function(req, res) {
+  res.render('change-password', {
+    layout: 'loginIndex',
+    title: 'Change Password',
+    user: req.session.curUserData
+  });
+});
+
+// Verify current password
+server.post('/change-password-verify-current', isAuth, async function(req, res) {
+  const { email, currentPassword } = req.body;
+  const userEmail = req.session.curUserData.email;
+
+  // Security: Ensure user can only verify their own password
+  if (email !== userEmail) {
+    return res.render('change-password', {
+      layout: 'loginIndex',
+      title: 'Change Password',
+      user: req.session.curUserData,
+      errMsg: 'Invalid request.'
+    });
+  }
+
+  try {
+    // Verify current password
+    const user = await responder.getUser(email, currentPassword);
+    
+    if (user && !user.locked) {
+      // Generate token for password change session
+      const token = require('crypto').randomBytes(32).toString('hex');
+      
+      // Store in session with expiry
+      req.session.passwordChange = {
+        email: email,
+        token: token,
+        verifiedAt: Date.now(),
+        expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes
+      };
+
+      res.render('change-password-reset', {
+        layout: 'loginIndex',
+        title: 'Change Password',
+        email: email,
+        token: token
+      });
+    } else {
+      // Generic error message - don't reveal which part was wrong
+      responder.addLogs(email, req.session.curUserData.role, 'Current password verification failed', 'Fail');
+      res.render('change-password', {
+        layout: 'loginIndex',
+        title: 'Change Password',
+        user: req.session.curUserData,
+        errMsg: 'Invalid current password.'
+      });
+    }
+  } catch (error) {
+    console.error('Password verification error:', error);
+    res.render('change-password', {
+      layout: 'loginIndex',
+      title: 'Change Password',
+      user: req.session.curUserData,
+      errMsg: 'An error occurred. Please try again.'
+    });
+  }
+});
+
+// Final password change
+server.post('/change-password-final', isAuth, async function(req, res) {
+  const { email, token, newPassword, confirmPassword } = req.body;
+  const changeData = req.session.passwordChange;
+  const userEmail = req.session.curUserData.email;
+
+  // Validate session and ownership
+  if (!changeData || changeData.email !== email || changeData.token !== token || email !== userEmail) {
+    return res.redirect('/change-password-flow');
+  }
+
+  // Check session expiry
+  if (Date.now() > changeData.expiresAt) {
+    req.session.passwordChange = null;
+    return res.render('change-password', {
+      layout: 'loginIndex',
+      title: 'Change Password',
+      user: req.session.curUserData,
+      errMsg: 'Password change session expired. Please start over.'
+    });
+  }
+
+  try {
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      return res.render('change-password-reset', {
+        layout: 'loginIndex',
+        title: 'Change Password',
+        email: email,
+        token: token,
+        errMsg: 'Passwords do not match.'
+      });
+    }
+
+    // Check password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.render('change-password-reset', {
+        layout: 'loginIndex',
+        title: 'Change Password',
+        email: email,
+        token: token,
+        errMsg: 'Password does not meet strength requirements.'
+      });
+    }
+
+    // Check password reuse and change frequency
+    const canChangeResult = await responder.canChangePassword(email, newPassword);
+    if (!canChangeResult.allowed) {
+      return res.render('change-password-reset', {
+        layout: 'loginIndex',
+        title: 'Change Password',
+        email: email,
+        token: token,
+        errMsg: canChangeResult.reason
+      });
+    }
+
+    // Update password
+    const success = await responder.updatePasswordWithHistory(email, newPassword);
+    
+    if (success) {
+      // Clear session data
+      req.session.passwordChange = null;
+      
+      // Log the action
+      await responder.addLogs(email, req.session.curUserData.role, 'Password changed successfully via profile', 'Success');
+      
+      // Destroy session and redirect to login
+      req.session.destroy((err) => {
+        if(err) {
+          console.error('Session destruction error:', err);
+          // Still proceed with redirect
+        }
+        res.render('login', {
+          layout: 'loginIndex',
+          title: 'Login',
+          errMsg: 'Password changed successfully. Please login with your new password.'
+        });
+      });
+    } else {
+      throw new Error('Password update failed');
+    }
+
+  } catch (error) {
+    console.error('Password change error:', error);
+    res.render('change-password-reset', {
+      layout: 'loginIndex',
+      title: 'Change Password',
+      email: email,
+      token: token,
+      errMsg: 'An error occurred during password change. Please try again.'
+    });
+  }
+});
+
+// Prevent back navigation after password change using middleware
+server.use('/change-password-flow', function(req, res, next) {
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.header('Pragma', 'no-cache');
+  res.header('Expires', 0);
+  next();
+});
 
 /************************no need to edit past this point********************************* */
 }
