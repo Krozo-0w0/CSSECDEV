@@ -6,7 +6,6 @@ $(document).ready(function(){
             function(data, status){
                 if (status === 'success'){
                     if (data.taken === 1) {
-                        $("#emailErrorContainer").text("Email already in use.");
                     } else if(data.taken === 0){
                         $("#emailErrorContainer").empty();
                     } else {

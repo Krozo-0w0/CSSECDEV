@@ -7,6 +7,7 @@ const { resourceLimits } = require('worker_threads');
 const { Timestamp } = require('mongodb');
 
 
+
 function dateToVerbose(inputDate){
     const dateObject = new Date(inputDate);
 
@@ -95,7 +96,7 @@ const isAuthLogin = (req, res, next) => {
 }
 
 // LOGIN load login page 
-server.get('/', isAuthLogin, function(req, resp){
+server.get('/', isAuthLogin,function(req, resp){
     resp.render('login',{
       layout: 'loginIndex',
       title: 'Login Page'
@@ -126,10 +127,7 @@ server.post('/email_checker', function(req, resp){
         } else {
             resp.send({taken : 0});
         }             
-    })
-    .catch(error => {
-        console.error(error);
-    });
+    }).catch(error => { errorPage(500, error, req, resp); });
 
  
 });
@@ -193,9 +191,60 @@ server.post('/register-checker', function(req, resp){
         }               
     })
     .catch(error => {
-        console.error(error);
-    });  
+        errorPage(500, error, req, resp);
+    });
 });
+
+function errorPage(errorNum, error, req, resp){
+    var message = "";
+
+    if (errorNum === 400) {
+        message = "Bad Request. The data sent to the server was invalid.";
+    } 
+    else if (errorNum === 401) {
+        message = "Unauthorized. You must be logged in to access this resource.";
+    } 
+    else if (errorNum === 403) {
+        message = "Forbidden. You do not have permission to access this resource.";
+    } 
+    else if (errorNum === 404) {
+        message = "Page Not Found. The resource you requested does not exist.";
+    } 
+    else if (errorNum === 409) {
+        message = "Conflict. The request could not be completed due to a conflict.";
+    } 
+    else if (errorNum === 429) {
+        message = "Too Many Requests. You are sending requests too quickly.";
+    } 
+    else if (errorNum === 500) {
+        message = "Internal Server Error. Something went wrong on our end.";
+    } 
+    else if (errorNum === 503) {
+        message = "Service Unavailable. The server is currently unavailable.";
+    } 
+    else {
+        message = "Unknown Error Occurred.";
+    }
+
+     responder.getUserByEmail(req.session.curUserMail)
+    .then(name => {
+        responder.addLogs(req.session.curUserMail, name.role, error, "Fail");
+        resp.render('error', {
+            layout: 'loginIndex',
+            title: 'Error Page',
+            errNum: errorNum,
+            errMess: message
+        });
+    }).catch(error2 => {
+        responder.addLogs("N/A", "N/A", error, "Fail");
+        resp.render('error', {
+            layout: 'loginIndex',
+            title: 'Error Page',
+            errNum: errorNum,
+            errMess: message
+        });
+    });  
+}
 
 
 // johans - added lockout checker; if else lang yun
@@ -228,7 +277,7 @@ server.post('/register-checker', function(req, resp){
                     errMsg: 'Account locked. Please try again after 15 minutes.'
                 });
             } else {
-                responder.addLogs(userEmail, "N/A", `User Login Failed`, "Fail");
+                responder.addLogs("N/A", "N/A", `User Login Failed`, "Fail");
                 resp.render('login',{
                     layout: 'loginIndex',
                     title: 'Login Page',
@@ -237,7 +286,7 @@ server.post('/register-checker', function(req, resp){
             }             
         })
         .catch(error => {
-            console.error(error);
+            errorPage(500, error, req, resp);
         });
 
     });
@@ -264,7 +313,7 @@ server.get('/profile', isAuth, function(req, resp) {
        
     })
     .catch(error => {
-        console.error(error);
+        errorPage(500, error, req, resp);
     });
 });
 
@@ -298,46 +347,48 @@ server.get('/mainMenu', isAuth, function(req, resp) {
                 user:  req.session.curUserData,
             });
         } else{
-    
-        // get lab data for display
-        req.session.searchQuery = null;
-        responder.getLabs()
-        .then(labData => {
-            let seenLabs = [];
-            for (let i = 0; i < 3 && i < labData.length; i++){
-                seenLabs.push(labData[i]);
-            }
-            req.session.labPtr = seenLabs.length;
+            // get lab data for display
+            req.session.searchQuery = null;
+            responder.getLabs()
+            .then(labData => {
+                let seenLabs = [];
+                for (let i = 0; i < 3 && i < labData.length; i++){
+                    seenLabs.push(labData[i]);
+                }
+                req.session.labPtr = seenLabs.length;
 
-            if(name.role == "admin"){
-                resp.render('mainMenuTech', {
-                    layout: 'mainMenuIndexTech',
-                    title: 'Main Menu Technician',
-                    labs: seenLabs,
-                    user:  req.session.curUserData
-                });
-            }else if(name.role == "roleA"){
-                console.log("RoleA Main menu");
-                resp.render('mainMenu-role-A', {
-                    layout: 'mainMenuIndex-role-A',
-                    title: 'Main Menu Role A',
-                    labs: seenLabs,
-                    user:  req.session.curUserData
-                });
-            }else{
-                console.log("RoleB Main menu");
-                resp.render('mainMenu', {
-                    layout: 'mainMenuIndex',
-                    title: 'Main Menu',
-                    labs: seenLabs,
-                    user:  req.session.curUserData
-                });
-            }     
-        })
-        .catch(error => {
-            console.error(error);
-        });
+                if(name.role == "admin"){
+                    resp.render('mainMenuTech', {
+                        layout: 'mainMenuIndexTech',
+                        title: 'Main Menu Technician',
+                        labs: seenLabs,
+                        user:  req.session.curUserData
+                    });
+                }else if(name.role == "roleA"){
+                    console.log("RoleA Main menu");
+                    resp.render('mainMenu-role-A', {
+                        layout: 'mainMenuIndex-role-A',
+                        title: 'Main Menu Role A',
+                        labs: seenLabs,
+                        user:  req.session.curUserData
+                    });
+                }else{
+                    console.log("RoleB Main menu");
+                    resp.render('mainMenu', {
+                        layout: 'mainMenuIndex',
+                        title: 'Main Menu',
+                        labs: seenLabs,
+                        user:  req.session.curUserData
+                    });
+                }     
+            })
+            .catch(error => {
+                errorPage(500, error, req, resp);
+            });
         }
+    })
+    .catch(error => {
+        errorPage(500, error, req, resp);
     });
 });
 
@@ -345,6 +396,8 @@ server.get('/mainMenu', isAuth, function(req, resp) {
 server.post('/deleteProfile', function(req, resp){
     responder.getUserByEmail(req.session.curUserMail).then(user=> {
         responder.addLogs(req.session.curUserMail, user.role, `User Deleted.`, "Success");
+    }).catch(error => {
+        errorPage(500, error, req, resp);
     });
     responder.deleteProfile(req.session.curUserMail).then(function(){
         console.log("Profile delete success");
@@ -353,7 +406,7 @@ server.post('/deleteProfile', function(req, resp){
             resp.redirect('/');
         });
     }).catch(error => {
-        console.error(error);
+        errorPage(500, error, req, resp);
     });
 });
 
@@ -374,7 +427,7 @@ server.post('/nextBtn', function(req, resp) {
         resp.send({labs:  req.session.seenLabs});
     })
     .catch(error => {
-        console.error(error);
+        errorPage(500, error, req, resp);
     });
     
 })
@@ -398,7 +451,7 @@ server.post('/backBtn', function(req, resp) {
         
     })
     .catch(error => {
-        console.error(error);
+        errorPage(500, error, req, resp);
     });
     
 })
@@ -417,12 +470,14 @@ server.get('/edit-profile', isAuth, function(req, resp) {
 server.post('/deleteProfile', function(req, resp){
     responder.getUserByEmail(req.session.curUserMail).then(user=> {
         responder.addLogs(req.session.curUserMail, user.role, `User Deleted.`, "Success");
+    }).catch(error => {
+        errorPage(500, error, req, resp);
     });
     responder.deleteProfile( req.session.curUserMail).then(function(){
         console.log("Profile delete success");
         resp.redirect("/");
     }).catch(error => {
-        console.error(error);
+        errorPage(500, error, req, resp);
     });
 });
 
@@ -432,17 +487,17 @@ server.post('/load-people', function(req, resp){
         responder.userSearch( req.session.searchQuery)
         .then(users => {
             resp.send({users:users,searchQuery :  req.session.searchQuery});
-        }).catch (error =>{
-            console.error(error);
-        });
+        }).catch(error => {
+        errorPage(500, error, req, resp);
+    });
     } else{
         responder.getAllUsers()
         .then(users => {
             resp.send({users: users, searchQuery: "What are you looking for?"});
         })
         .catch(error => {
-            console.error(error);
-        });
+        errorPage(500, error, req, resp);
+    });
     }
 })
 
@@ -451,17 +506,12 @@ server.post('/load-labs', function(req, resp){
         responder.labSearch( req.session.searchQuery)
         .then(labs => {
             resp.send({labs:labs, searchQuery :  req.session.searchQuery});
-        }).catch (error =>{
-            console.error(error);
-        });
+        }).catch(error => {errorPage(500, error, req, resp);});
     } else{
         responder.getLabs()
         .then(labs => {
             resp.send({labs: labs, searchQuery: "What are you looking for?"});
-        })
-        .catch(error => {
-            console.error(error);
-        });
+        }).catch(error => {errorPage(500, error, req, resp);});
     }
 })
 
@@ -471,17 +521,12 @@ server.post('/load-labsbyTags', function(req, resp){
         responder.tagSearch( req.session.searchQuery)
         .then(labs => {
             resp.send({labs:labs, searchQuery : req.session.searchQuery});
-        }).catch (error =>{
-            console.error(error);
-        });
+        }).catch(error => {errorPage(500, error, req, resp);});
     } else{
         responder.getLabs()
         .then(labs => {
             resp.send({labs: labs, searchQuery: "What are you looking for?"});
-        })
-        .catch(error => {
-            console.error(error);
-        });
+        }).catch(error => {errorPage(500, error, req, resp);});
     }
 })
 
@@ -502,10 +547,7 @@ server.get('/public-profile/:id/', isAuth, function(req, resp) {
                 user:  req.session.curUserData
                 });
         }
-    })
-    .catch(error => {
-        console.error(error);
-    });
+    }).catch(error => {errorPage(500, error, req, resp);});
 })
 
 // CHANGE USERNAME
@@ -516,7 +558,7 @@ server.post('/change_username', function(req, resp){
     responder.getUserByEmail(req.session.curUserMail).then(user=> {
         responder.addLogs(req.session.curUserMail, user.role,
              `Username Changed from ${user.username} to ${username}`, "Success");
-    });
+    }).catch(error => {errorPage(500, error, req, resp);});
 
     responder.changeUsername( req.session.curUserData.email,req.body.username)
     .then(booleanValue=>{
@@ -525,13 +567,13 @@ server.post('/change_username', function(req, resp){
             responder.getUserByEmail(email)
             .then(user=>{
                  req.session.curUserData = user;
-            })
+            }).catch(error => {errorPage(500, error, req, resp);});
             resp.send({username : username});
         } else{
             console.log("UsernameChangeFail");
             responder.addLogs(req.session.curUserMail, user.role,`Username Changed failed.`, "Fail");
         }
-    })
+    }).catch(error => {errorPage(500, error, req, resp);});
 });
 
 // CHANGE PASSWORD
@@ -552,8 +594,8 @@ server.post('/change_password', function(req, resp){
                 console.log("PasswordChangeFail");
                 resp.send({message : "Password Change Failed!"});
             }
-        });
-    });
+        }).catch(error => {errorPage(500, error, req, resp);});
+    }).catch(error => {errorPage(500, error, req, resp);});
 });
 
 // LAB VIEW
@@ -630,23 +672,18 @@ server.get('/labs/:id/', isAuth, function(req, resp) {
                                         date: getCurrentDate()
                                     });
                                 }
-                            })
+                            }).catch(error => { errorPage(500, error, req, resp); });
                             
-                        })
+                        }).catch(error => { errorPage(500, error, req, resp); });
                     })
-                })
+                }).catch(error => { errorPage(500, error, req, resp); });
 
             })
-            .catch(error => {
-                // Handle errors if the promise is rejected
-                console.error("Error occurred:", error);
-            });
+            .catch(error => { errorPage(500, error, req, resp); });
 
 
     })
-    .catch(error => {
-        console.error(error);
-    });
+    .catch(error => { errorPage(500, error, req, resp); });
 
 })
 
@@ -656,10 +693,7 @@ server.post('/labdetails', function(req, resp){
     .then(curLab => {
         resp.send({lab: curLab});
 
-    })
-    .catch(error => {
-        console.error(error);
-    });
+    }).catch(error => { errorPage(500, error, req, resp); });
 });
 
 
@@ -709,22 +743,13 @@ server.post("/modal", function(req, resp){
                 .then(user2 => {
                     resp.send({modal, name, user: user2});
 
-                })
-                .catch(error => {
-                    console.error(error);
-                });
+                }).catch(error => { errorPage(500, error, req, resp); });
             })
-            .catch(error => {
-                console.error(error);
-            });
+            .catch(error => { errorPage(500, error, req, resp); });
         })
-        .catch(error => {
-            console.error(error);
-        });
+        .catch(error => { errorPage(500, error, req, resp); });
     })
-    .catch(error => {
-        console.error(error);
-    });
+    .catch(error => { errorPage(500, error, req, resp); });
 });
 
 
@@ -769,21 +794,13 @@ server.post("/modalTech", function(req, resp){
                     resp.send({modal, name, user: user2});
 
                 })
-                .catch(error => {
-                    console.error(error);
-                });
+                .catch(error => { errorPage(500, error, req, resp); });
             })
-            .catch(error => {
-                console.error(error);
-            });
+            .catch(error => { errorPage(500, error, req, resp); });
         })
-        .catch(error => {
-            console.error(error);
-        });
+        .catch(error => { errorPage(500, error, req, resp); });
     })
-    .catch(error => {
-        console.error(error);
-    });
+    .catch(error => { errorPage(500, error, req, resp); });
 });
 
 server.post('/reserve', function(req, resp){
@@ -839,11 +856,9 @@ server.post('/reserve', function(req, resp){
 
                 resp.send({status: "reserved", reserve: obj});
               
-        });                
+        }).catch(error => { errorPage(500, error, req, resp); });                
     })
-    .catch(error => {
-        console.error(error);
-    });
+    .catch(error => { errorPage(500, error, req, resp); });
 });
 
 server.post('/getTimeFrames', function(req, resp){
@@ -856,14 +871,10 @@ server.post('/getTimeFrames', function(req, resp){
                 resp.send({dateData : dateData});
                     
             })
-            .catch(error => {
-                console.error(error);
-            });
+            .catch(error => { errorPage(500, error, req, resp); });
     
         })
-        .catch(error => {
-            console.error(error);
-        });
+        .catch(error => { errorPage(500, error, req, resp); });
     }else{
         resp.redirect('/');
     }
@@ -938,34 +949,23 @@ server.post('/dateChange', function(req, resp){
                                     });
                                 }
                             })
-                            .catch(error => {
-                                console.error(error);
-                            });
+                            .catch(error => { errorPage(500, error, req, resp); });
                         })
-                        .catch(error => {
-                            console.error(error);
-                        });
+                        .catch(error => { errorPage(500, error, req, resp); });
                 })
-                .catch(error => {
-                    console.error(error);
-                });
+                .catch(error => { errorPage(500, error, req, resp); });
 
             })
-            .catch(error => {
-                console.error(error);
-            });
+            .catch(error => { errorPage(500, error, req, resp); });
 
         })
         .catch(error => {
-            // Handle errors if the promise is rejected
-            console.error("Error occurred:", error);
+            errorPage(500, error, req, resp);
         });
 
 
     })
-    .catch(error => {
-        console.error(error);
-    });
+    .catch(error => { errorPage(500, error, req, resp); });
 });
 
 server.get('/modifyLab', isAuth, function(req, resp){
@@ -980,12 +980,10 @@ server.get('/modifyLab', isAuth, function(req, resp){
                 timeFrame: dateData
             });
         })
-        .catch(error => {
-            console.error(error);
-        });
+        .catch(error => { errorPage(500, error, req, resp); });
     })
     .catch(error => {
-        console.error(error);
+        errorPage(500, error, req, resp);
     });
 });
 
@@ -993,7 +991,7 @@ server.get('/manageRoles', isAuth, function(req, resp){
     responder.getUserByEmail(req.session.curUserMail)
     .then(user => {
         if(user.role == "admin"){
-            responder.getAdmin_roleA()
+            responder.getAllUsers()
             .then(nonAdmin => {
                 resp.render('manageRolesTech', {
                 layout: 'manageRolesIndexTech',
@@ -1001,12 +999,12 @@ server.get('/manageRoles', isAuth, function(req, resp){
                 date: getCurrentDate(),
                 resData: nonAdmin
             });
-        });
+        }).catch(error => { errorPage(500, error, req, resp); });
         }else{
-
+            errorPage(403, "Invalid Access: Tried to access /manageRoles", req, resp);
         }
             
-    });
+    }).catch(error => { errorPage(500, error, req, resp); });
 });
 
 server.get('/viewLogs', isAuth, function(req, resp){
@@ -1020,9 +1018,11 @@ server.get('/viewLogs', isAuth, function(req, resp){
                     title: 'View Logs',
                     resData: logs
                 });
-            })  
-        }
-    });
+            }).catch(error => { errorPage(500, error, req, resp); }); 
+            }else{
+                errorPage(403, "Invalid Access: Tried to access viewLogs", req, resp);
+            }
+    }).catch(error => { errorPage(500, error, req, resp); });
 });
 
 server.post('/filterLogs', isAuth, function (req, resp) {
@@ -1037,14 +1037,13 @@ server.post('/filterLogs', isAuth, function (req, resp) {
                         resp.send({ log: logs });
                     })
                     .catch(err => {
-                        console.error("Error filtering logs:", err);
-                        resp.status(500).send({ error: "Server error" });
+                        errorPage(500, err, req, resp);
                     });
 
             } else {
-                resp.status(403).send({ error: "Not authorized" });
+                errorPage(403, "Invalid Access: Tried to use filterLogs", req, resp);
             }
-        });
+        }).catch(error => { errorPage(500, error, req, resp); });
 });
 
 
@@ -1055,12 +1054,10 @@ server.post('/changeModifyLab', function(req, resp){
         .then(dateData => {
             resp.send({dateData: dateData});
         })
-        .catch(error => {
-            console.error(error);
-        });
+        .catch(error => { errorPage(500, error, req, resp); });
     })
     .catch(error => {
-        console.error(error);
+        errorPage(500, error, req, resp);
     });
 });
 // ADD NEW LINES BELOW HERE
@@ -1087,7 +1084,7 @@ function sortByStartTime(array) {
 }
 
 server.post('/save-profile', function(req, resp){
-    responder.updateProfile( req.session.curUserData.email, req.body.username, req.body.password, req.body['prof-pic'], req.body.bio)
+    responder.updateProfile( req.session.curUserData.email, req.body.username, req.body['prof-pic'], req.body.bio)
     .then(whatever => {
         responder.getUserByEmail( req.session.curUserData.email)
         .then(user => {
@@ -1095,14 +1092,10 @@ server.post('/save-profile', function(req, resp){
              req.session.curUserData = user;
             resp.redirect('/profile')
         })
-        .catch(error => {
-            console.error(error);
-        });
+        .catch(error => { errorPage(500, error, req, resp); });
 
     })
-    .catch(error => {
-        console.error(error);
-    });
+    .catch(error => { errorPage(500, error, req, resp); });
 
 });
 
@@ -1120,11 +1113,7 @@ server.post('/searchFunction', function (req, resp) {
             resp.redirect('/mainMenu?labs=' + encodeURIComponent(JSON.stringify(seenLabs)));
 
         })
-        .catch(error => {
-            // Handle errors if needed
-            console.error(error);
-            resp.status(500).send('Internal Server Error');
-        });
+        .catch(error => { errorPage(500, error, req, resp); });
 });
 
 server.get('/editReservation', isAuth, function (req, resp) {
@@ -1132,9 +1121,7 @@ server.get('/editReservation', isAuth, function (req, resp) {
     .then(lab => {
         resp.redirect('/labs/' + lab._id);            
     })
-    .catch(error => {
-        console.error(error);
-    });
+    .catch(error => { errorPage(500, error, req, resp); });
 });
 
 server.post('/removeReservation', function (req, resp) {
@@ -1142,7 +1129,7 @@ server.post('/removeReservation', function (req, resp) {
     .then(result =>{
         responder.getUserByEmail(req.session.curUserMail).then(user=> {
             responder.addLogs(req.session.curUserMail, user.role,`Reservation Removed successfully seat:${req.body.seat} room:${req.body.room}`, "Success");
-        });
+        }).catch(error => { errorPage(500, error, req, resp); });
         
         console.log('success update reservation');
         resp.send({stats: 'success'});
@@ -1150,8 +1137,8 @@ server.post('/removeReservation', function (req, resp) {
     .catch(error => {
         responder.getUserByEmail(req.session.curUserMail).then(user=> {
             responder.addLogs(req.session.curUserMail, user.role,`Reservation Removed Failed seat:${req.body.seat} room:${req.body.room}`, "Fail");
-        });
-        console.error(error);
+        }).catch(error => { errorPage(500, error, req, resp); });
+        errorPage(500, error, req, resp);
     });
 });
 
@@ -1159,7 +1146,7 @@ server.get('/logout', function (req, resp) {
     const userEmail = req.session.curUserMail;
     responder.getUserByEmail(userEmail).then(user=> {
         responder.addLogs(userEmail, user.role,`User logout`, "Success");
-    });
+    }).catch(error => { errorPage(500, error, req, resp); });
      req.session.curUserData = null;
     req.session.destroy((err) => {
         if(err) throw err;
@@ -1189,17 +1176,17 @@ server.post('/addTimeFrame', function(req, resp){
             if(valid){
                 responder.getUserByEmail(req.session.curUserMail).then(user=> {
                     responder.addLogs(req.session.curUserMail, user.role,`User added new time frame room:${curLab.roomNum} timestart:${timeStart} timeend:${timeEnd} date${date}`, "Success");
-                });
+                }).catch(error => { errorPage(500, error, req, resp); });
                 responder.addSchedule(timeStart, timeEnd, date, curLab.roomNum, curLab.seats * curLab.numCols)
                 resp.send({stat: "success"});
             }else{
                 responder.getUserByEmail(req.session.curUserMail).then(user=> {
                     responder.addLogs(req.session.curUserMail, user.role,`User failed adding new time frame room:${curLab.roomNum} timestart:${timeStart} timeend:${timeEnd} date${date}`, "Fail");
-                });
+                }).catch(error => { errorPage(500, error, req, resp); });
                 resp.send({stat: "fail"});
             }
         })
-    })
+    }).catch(error => { errorPage(500, error, req, resp); });
 
 
 });
@@ -1213,10 +1200,10 @@ server.post("/deleteTimeFrame", function(req, resp){
     .then(curLab => {
         responder.getUserByEmail(req.session.curUserMail).then(user=> {
             responder.addLogs(req.session.curUserMail, user.role,`Lab ${curLab.roomNum} timesFrame ${timeStart}-${timeEnd} Deleted`, "Success");
-        });
+        }).catch(error => { errorPage(500, error, req, resp); });
         responder.removeTimeFrame(timeStart, timeEnd, date, curLab.roomNum);
         resp.send({stat: "success"});
-    })
+    }).catch(error => { errorPage(500, error, req, resp); });
 
 });
 
@@ -1238,7 +1225,7 @@ function completeReservation(){
 
             }
         }
-    })
+    }).catch(error => { errorPage(500, error, req, resp); });
     
 }
 setInterval(completeReservation, 10000);
@@ -1253,8 +1240,8 @@ server.post('/checkReserve', function(req, resp){
             }else{
                 resp.send({status: 'unavail'})
             }
-        })
-    })
+        }).catch(error => { errorPage(500, error, req, resp); });
+    }).catch(error => { errorPage(500, error, req, resp); });
 });
 
 server.post('/loadReserve', function(req, resp){
@@ -1268,11 +1255,11 @@ server.post('/loadReserve', function(req, resp){
             responder.getReservedAll(lab, date, time).then(function(reservation){
                 responder.getReservedAll2(lab, date).then(function(resData){
                     resp.send({reservation, resData, lab});
-                });
+                }).catch(error => { errorPage(500, error, req, resp); });
 
-            })
+            }).catch(error => { errorPage(500, error, req, resp); });
 
-        })
+        }).catch(error => { errorPage(500, error, req, resp); });
     } else{
         console.log('check');
         resp.send({status: "lol"});
@@ -1292,12 +1279,12 @@ function completeReservation(){
                 if(reservations[i].status === 'active'){
                     responder.completeReservation(reservations[i].bookDate, reservations[i].timeFrame, reservations[i].seat, reservations[i].room).then(function(val){
 
-                    })
+                    }).catch(error => { errorPage(500, error, req, resp); });
                 }
 
             }
         }
-    })
+    }).catch(error => { errorPage(500, error, req, resp); });
     
 }
 setInterval(completeReservation, 10000);
@@ -1312,8 +1299,8 @@ server.post('/checkReserve', function(req, resp){
             }else{
                 resp.send({status: 'unavail'})
             }
-        })
-    })
+        }).catch(error => { errorPage(500, error, req, resp); });
+    }).catch(error => { errorPage(500, error, req, resp); });
 });
 
 
@@ -1383,17 +1370,13 @@ server.post('/assign_role', function(req, resp){
                     resp.send({status: "error"});
                 }
             });
-        }else if (curuser.role == "roleA"){
-            //only can modify specific roles
         }else{
-            //error
+            errorPage(403, "Invalid Access: Tried to access assign_role", req, resp);
         }
-    });
+    }).catch(error => { errorPage(500, error, req, resp); });
 
     })
-    .catch(error => {
-        console.error(error);
-    });
+    .catch(error => { errorPage(500, error, req, resp); });
 });
 
 server.post('/deleteUser', function(req, resp){
@@ -1402,15 +1385,15 @@ server.post('/deleteUser', function(req, resp){
         if(result){
             responder.getUserByEmail(req.session.curUserMail).then(user=> {
                 responder.addLogs(req.session.curUserMail, user.role,`User deleted user ${req.body.email}`, "Success");
-            });
+            }).catch(error => { errorPage(500, error, req, resp); });
             resp.send({status: "success"});
         }else{
             responder.getUserByEmail(req.session.curUserMail).then(user=> {
                 responder.addLogs(req.session.curUserMail, user.role,`User failed to deleted user ${req.body.email}`, "Fail");
-            });
+            }).catch(error => { errorPage(500, error, req, resp); });
             resp.send({status: "error"});
         }
-    });
+    }).catch(error => { errorPage(500, error, req, resp); });
 });
 
 //johans - forgot password route
@@ -1428,6 +1411,7 @@ server.post('/forgot-password-init', async function(req, res) {
   try {
     const user = await responder.getUserByEmail(email);
     if (!user) {
+        responder.addLogs(email, 'N/A', 'Forgot Password: Email not found', 'Fail');
       return res.render('forgot-password', {
         layout: 'loginIndex',
         title: 'Forgot Password',
@@ -1436,6 +1420,7 @@ server.post('/forgot-password-init', async function(req, res) {
     }
 
     if (!user.securityQuestions || user.securityQuestions.length < 2) {
+        responder.addLogs(email, user.role, 'Forgot Password: No security Questions', 'Fail');
       return res.render('forgot-password', {
         layout: 'loginIndex',
         title: 'Forgot Password',
@@ -1446,6 +1431,7 @@ server.post('/forgot-password-init', async function(req, res) {
     // Check if account is locked due to too many attempts
     if (user.passwordResetLockUntil && user.passwordResetLockUntil > Date.now()) {
       const lockTime = Math.ceil((user.passwordResetLockUntil - Date.now()) / (1000 * 60));
+      responder.addLogs(email, user.role, 'Forgot Password: Account Locked', 'Fail');
       return res.render('forgot-password', {
         layout: 'loginIndex',
         title: 'Forgot Password',
@@ -1470,7 +1456,7 @@ server.post('/forgot-password-init', async function(req, res) {
       tokenExpiry: tokenExpiry,
       attempts: 0
     };
-
+    
     res.render('forgot-password-questions', {
       layout: 'loginIndex',
       title: 'Security Questions',
@@ -1480,14 +1466,9 @@ server.post('/forgot-password-init', async function(req, res) {
       attemptsRemaining: 3 - req.session.passwordReset.attempts
     });
 
-  } catch (error) {
-    console.error('Forgot password error:', error);
-    res.render('forgot-password', {
-      layout: 'loginIndex',
-      title: 'Forgot Password',
-      errMsg: 'An error occurred. Please try again.'
-    });
-  }
+    } catch (error) {
+        errorPage(500, error, req, res);
+    }
 });
 
 server.post('/forgot-password-verify', async function(req, res) {
@@ -1502,6 +1483,7 @@ server.post('/forgot-password-verify', async function(req, res) {
   // Check token expiry
   if (Date.now() > resetData.tokenExpiry) {
     req.session.passwordReset = null;
+    responder.addLogs(email, "N/A", 'Forgot Password: Security token expired', 'Fail');
     return res.render('forgot-password', {
       layout: 'loginIndex',
       title: 'Forgot Password',
@@ -1514,7 +1496,7 @@ server.post('/forgot-password-verify', async function(req, res) {
     // Lock the account for 15 minutes
     await responder.lockPasswordReset(email, 15 * 60 * 1000);
     req.session.passwordReset = null;
-    
+    responder.addLogs(email, "N/A", 'Forgot Password: Too many failed attempts. Account locked for 15 minutes', 'Fail');
     return res.render('forgot-password', {
       layout: 'loginIndex',
       title: 'Forgot Password',
@@ -1530,6 +1512,7 @@ server.post('/forgot-password-verify', async function(req, res) {
     const isVerified = await responder.verifySecurityQuestionsForReset(email, resetData.questions, providedAnswers);
     
     if (isVerified) {
+        responder.addLogs(email, "N/A", 'Forgot Password: Security Answer Correct', 'Success');
       // Answers correct - proceed to password reset
       req.session.passwordReset.verified = true;
       req.session.passwordReset.verifiedAt = Date.now();
@@ -1543,7 +1526,7 @@ server.post('/forgot-password-verify', async function(req, res) {
     } else {
       // Answers incorrect
       req.session.passwordReset.attempts++;
-      
+      responder.addLogs(email, "N/A", `Forgot Password: Security Answer incorrect attempts${req.session.passwordReset.attempts}`, 'Fail');
       res.render('forgot-password-questions', {
         layout: 'loginIndex',
         title: 'Security Questions',
@@ -1554,14 +1537,9 @@ server.post('/forgot-password-verify', async function(req, res) {
         errMsg: 'One or more answers are incorrect. Please try again.'
       });
     }
-  } catch (error) {
-    console.error('Security questions verification error:', error);
-    res.render('forgot-password', {
-      layout: 'loginIndex',
-      title: 'Forgot Password',
-      errMsg: 'An error occurred. Please try again.'
-    });
-  }
+    } catch (error) {
+        errorPage(500, error, req, res);
+    }
 });
 
 //johans - Forgot Password - Reset password
@@ -1576,6 +1554,7 @@ server.post('/forgot-password-reset', async function(req, res) {
 
   // chinecheck verification was done within last 10 minutes
   if (Date.now() - resetData.verifiedAt > 10 * 60 * 1000) {
+    responder.addLogs(email, "N/A", `Forgot Password: Reset Session expired`, 'Fail');
     req.session.passwordReset = null;
     return res.render('forgot-password', {
       layout: 'loginIndex',
@@ -1611,6 +1590,7 @@ server.post('/forgot-password-reset', async function(req, res) {
     // ichecheck password reuse and change frequency
     const canChangePassword = await responder.canChangePassword(email, newPassword);
     if (!canChangePassword.allowed) {
+        responder.addLogs(email, "N/A", `Forgot Password: ${canChangePassword.reason}`, 'Fail');
       return res.render('forgot-password-reset', {
         layout: 'loginIndex',
         title: 'Reset Password',
@@ -1628,7 +1608,7 @@ server.post('/forgot-password-reset', async function(req, res) {
       req.session.passwordReset = null;
       
       // Log the action
-      await responder.addLogs(email, 'user', 'Password reset via forgot password', 'Success');
+      await responder.addLogs(email, 'N/A', 'Password reset via forgot password', 'Success');
       
       res.render('login', {
         layout: 'loginIndex',
@@ -1639,16 +1619,9 @@ server.post('/forgot-password-reset', async function(req, res) {
       throw new Error('Password update failed');
     }
 
-  } catch (error) {
-    console.error('Password reset error:', error);
-    res.render('forgot-password-reset', {
-      layout: 'loginIndex',
-      title: 'Reset Password',
-      email: email,
-      token: token,
-      errMsg: 'An error occurred during password reset. Please try again.'
-    });
-  }
+    } catch (error) {
+        errorPage(500, error, req, res);
+    }
 });
 
 // CHANGE PASSWORD FLOW - For authenticated users
@@ -1667,6 +1640,7 @@ server.post('/change-password-verify-current', isAuth, async function(req, res) 
 
   // Security: Ensure user can only verify their own password
   if (email !== userEmail) {
+    responder.addLogs(email, "N/A", `Forgot Password: Invalid request`, 'Fail');
     return res.render('change-password', {
       layout: 'loginIndex',
       title: 'Change Password',
@@ -1707,15 +1681,9 @@ server.post('/change-password-verify-current', isAuth, async function(req, res) 
         errMsg: 'Invalid current password.'
       });
     }
-  } catch (error) {
-    console.error('Password verification error:', error);
-    res.render('change-password', {
-      layout: 'loginIndex',
-      title: 'Change Password',
-      user: req.session.curUserData,
-      errMsg: 'An error occurred. Please try again.'
-    });
-  }
+    } catch (error) {
+        errorPage(500, error, req, res);
+    }
 });
 
 // Final password change
@@ -1767,6 +1735,7 @@ server.post('/change-password-final', isAuth, async function(req, res) {
     // Check password reuse and change frequency
     const canChangeResult = await responder.canChangePassword(email, newPassword);
     if (!canChangeResult.allowed) {
+        responder.addLogs(email, "N/A", `Forgot Password: ${canChangeResult.reason}`, 'Fail');
       return res.render('change-password-reset', {
         layout: 'loginIndex',
         title: 'Change Password',
@@ -1802,16 +1771,9 @@ server.post('/change-password-final', isAuth, async function(req, res) {
       throw new Error('Password update failed');
     }
 
-  } catch (error) {
-    console.error('Password change error:', error);
-    res.render('change-password-reset', {
-      layout: 'loginIndex',
-      title: 'Change Password',
-      email: email,
-      token: token,
-      errMsg: 'An error occurred during password change. Please try again.'
-    });
-  }
+    } catch (error) {
+        errorPage(500, error, req, res);
+    }
 });
 
 // Prevent back navigation after password change using middleware
@@ -1821,6 +1783,17 @@ server.use('/change-password-flow', function(req, res, next) {
   res.header('Expires', 0);
   next();
 });
+
+server.use((req, resp) => {
+    errorPage(404, "Page Not Found", req, resp);
+});
+
+server.use((err, req, resp, next) => {
+    console.error("🔥 Global Error Caught:", err.stack);
+    errorPage(500, err.stack, req, resp);
+});
+
+
 
 /************************no need to edit past this point********************************* */
 }

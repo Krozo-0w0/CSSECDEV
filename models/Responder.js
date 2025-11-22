@@ -690,7 +690,7 @@ function getReservedOfPerson (personEmail) {
 }
 module.exports.getReservedOfPerson = getReservedOfPerson;
 
-function updateProfile(userEmail, userName, passWord, userPfp, userBio) {
+function updateProfile(userEmail, userName, userPfp, userBio) {
     return new Promise((resolve, reject) => {
         const dbo = mongoClient.db(databaseName);
         const colUser = dbo.collection(colUsers);
@@ -701,36 +701,15 @@ function updateProfile(userEmail, userName, passWord, userPfp, userBio) {
         const emailSearch = { email: userEmail };
         colUser.findOne(emailSearch).then(function (val) {
             if (val != null) {
-                if (passWord == ""){
-                    passWord = val.password;
-                    console.log("password after: " +passWord);
-                }
-
-                if (val.password != passWord) {
-                    bcrypt.hash(passWord, saltRounds, function (err, hash) {
-                        if (err) {
-                            reject(err);
-                        } else {
-                            const updateValues = { $set: { username: userName, password: hash, pfp: userPfp, bio: userBio } };
-                            colUser.updateOne(updateQuery, updateValues).then(function (res) {
-                                colReserve.updateMany(updateQuery, updateValuesReserves).then(function (res) {
-                                    console.log('Update successful');
-                                    console.log('Inside: ' + JSON.stringify(res));
-                                    resolve();
-                                }).catch(error => reject(error));
-                            }).catch(error => reject(error));
-                        }
-                    });
-                } else {
-                    const updateValues = { $set: { username: userName, password: passWord, pfp: userPfp, bio: userBio } };
-                    colUser.updateOne(updateQuery, updateValues).then(function (res) {
-                        colReserve.updateMany(updateQuery, updateValuesReserves).then(function (res) {
-                            console.log('Update successful');
-                            console.log('Inside: ' + JSON.stringify(res));
-                            resolve();
-                        }).catch(error => reject(error));
+                const updateValues = { $set: { username: userName, pfp: userPfp, bio: userBio } };
+                colUser.updateOne(updateQuery, updateValues).then(function (res) {
+                    colReserve.updateMany(updateQuery, updateValuesReserves).then(function (res) {
+                        console.log('Update successful');
+                        console.log('Inside: ' + JSON.stringify(res));
+                        resolve();
                     }).catch(error => reject(error));
-                }
+                }).catch(error => reject(error));
+                
             }
         }).catch(error => reject(error));
     });
@@ -966,9 +945,16 @@ module.exports.updateRole = updateRole;
 function addLogs(email, role, action, status){
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colLogs);
+    var mail = email;
+    if(!email){
+        mail = "N/A";
+    }
     
+    console.log(mail);
+    console.log(action);
+
     const info = {
-        email: email,
+        email: mail,
         role: role,
         date: getCurrentDate(),
         action: action,

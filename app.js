@@ -15,6 +15,9 @@ server.engine('hbs', handlebars.engine({
     extname: 'hbs',
 }));
 
+const path = require('path');
+server.use(express.static(path.join(__dirname, 'public')));
+
 
 
 server.use(express.static('public'));
@@ -79,7 +82,13 @@ Handlebars.registerHelper('concat', function() {
   return args.join('');
 });
 
+process.on('unhandledRejection', (reason, promise) => {
+    console.error("🔥 UNHANDLED PROMISE REJECTION:", reason);
+});
 
+process.on('uncaughtException', (err) => {
+    console.error("🔥 UNCAUGHT EXCEPTION:", err);
+});
 
 const port = process.env.PORT | 3000;
 server.listen(port, function(){

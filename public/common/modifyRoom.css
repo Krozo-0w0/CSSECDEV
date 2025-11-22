@@ -44,10 +44,11 @@ body{
     align-items: center;
 }
 
-#manage-Maintitle h1, .modify-titles{
+#modify-Maintitle h1, .modify-titles{
     color: white;
     font-style: sans-serif;
 }
+
 
 #manage-Maintitle h1{
     font-size: 2em;
@@ -64,7 +65,8 @@ body{
 
 .head-container{
     display: flex;
-    width: 100%;
+    justify-content: center;
+    align-items: center;
 }
 
 .back {
@@ -72,11 +74,10 @@ body{
     display: flex;
     justify-content: center;
     align-items: center;
-    position: absolute;
 }
 
 .back img {
-    width: 60%;
+    width: 100%;
 }
 
 #manage-Maintitle{
