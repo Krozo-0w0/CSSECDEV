@@ -260,6 +260,8 @@ function errorPage(errorNum, error, req, resp){
                 responder.addLogs(userEmail, user.role, `User Login succesfully`, "Success");
                 req.session.isAuth = true;
                 
+                req.session.showLoginAlert = true;
+
                 if(req.body.remember != 'on'){
                     req.session.cookie.expires = false; 
                 }
@@ -330,13 +332,38 @@ server.get('/about', isAuth, function(req, resp) {
 server.get('/mainMenu', isAuth, function(req, resp) {
     req.session.isLabs = true;
 
-    const showLoginStatus = req.session.showLoginStatus;
-    const lastLoginInfo = req.session.lastLoginInfo;
+    console.log('req.session.showLoginStatus:', req.session.showLoginStatus);
 
-    req.session.showLoginStatus = false;
+    const showLoginStatus = req.session.showLoginAlert || false;
+    req.session.showLoginAlert = false;
 
     responder.getUserByEmail(req.session.curUserMail)
-    .then(name => {
+    .then(user => {
+
+        const lastLoginInfo = {
+            lastLoginTime: user.lastLogin,
+            lastLoginStatus: user.lastLoginStatus,
+            currentLoginTime: new Date()
+        };
+
+        // Format the date
+        if (lastLoginInfo.lastLoginTime) {
+            try {
+                const date = new Date(lastLoginInfo.lastLoginTime);
+                lastLoginInfo.formattedTime = date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                lastLoginInfo.formattedTime = 'Invalid Date';
+            }
+        } else {
+            lastLoginInfo.formattedTime = 'First login';
+        }
+
         if(req.query.labs != null){
             let labs = [];
             labs = JSON.parse(req.query.labs);
@@ -345,6 +372,8 @@ server.get('/mainMenu', isAuth, function(req, resp) {
                 title: 'Main Menu',
                 labs: labs,
                 user:  req.session.curUserData,
+                showLoginStatus: showLoginStatus,
+                lastLoginInfo: lastLoginInfo
             });
         } else{
             // get lab data for display
@@ -357,34 +386,40 @@ server.get('/mainMenu', isAuth, function(req, resp) {
                 }
                 req.session.labPtr = seenLabs.length;
 
-                if(name.role == "admin"){
-                    resp.render('mainMenuTech', {
-                        layout: 'mainMenuIndexTech',
-                        title: 'Main Menu Technician',
-                        labs: seenLabs,
-                        user:  req.session.curUserData
-                    });
-                }else if(name.role == "roleA"){
-                    console.log("RoleA Main menu");
-                    resp.render('mainMenu-role-A', {
-                        layout: 'mainMenuIndex-role-A',
-                        title: 'Main Menu Role A',
-                        labs: seenLabs,
-                        user:  req.session.curUserData
-                    });
-                }else{
-                    console.log("RoleB Main menu");
-                    resp.render('mainMenu', {
-                        layout: 'mainMenuIndex',
-                        title: 'Main Menu',
-                        labs: seenLabs,
-                        user:  req.session.curUserData
-                    });
-                }     
-            })
-            .catch(error => {
-                errorPage(500, error, req, resp);
-            });
+            if(user.role == "admin"){
+                resp.render('mainMenuTech', {
+                    layout: 'mainMenuIndexTech',
+                    title: 'Main Menu Technician',
+                    labs: seenLabs,
+                    user:  req.session.curUserData,
+                    showLoginStatus: showLoginStatus,
+                    lastLoginInfo: lastLoginInfo
+                });
+            }else if(user.role == "roleA"){
+                console.log("RoleA Main menu");
+                resp.render('mainMenu-role-A', {
+                    layout: 'mainMenuIndex-role-A',
+                    title: 'Main Menu Role A',
+                    labs: seenLabs,
+                    user:  req.session.curUserData,
+                    showLoginStatus: showLoginStatus,
+                    lastLoginInfo: lastLoginInfo
+                });
+            }else{
+                console.log("RoleB Main menu");
+                resp.render('mainMenu', {
+                    layout: 'mainMenuIndex',
+                    title: 'Main Menu',
+                    labs: seenLabs,
+                    user:  req.session.curUserData,
+                    showLoginStatus: showLoginStatus,
+                    lastLoginInfo: lastLoginInfo
+                });
+            }     
+        })
+        .catch(error => {
+            console.error(error);
+        });
         }
     })
     .catch(error => {
