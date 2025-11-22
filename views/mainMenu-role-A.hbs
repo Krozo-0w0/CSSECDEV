@@ -1,3 +1,85 @@
+{{#if showLoginStatus}}
+<div class="login-alert" id="loginAlert">
+    <div class="alert-content">
+        <h3>Last Login Information</h3>
+        <p><strong>Last Login Time:</strong> 
+            {{#if lastLoginInfo.lastLoginTime}}
+                {{lastLoginInfo.lastLoginTime}}
+            {{else}}
+                This is your first login
+            {{/if}}
+        </p>
+        <p><strong>Last Login Status:</strong> 
+            <span class="status-{{lastLoginInfo.lastLoginStatus}}">
+                {{lastLoginInfo.lastLoginStatus}}
+            </span>
+        </p>
+        <button onclick="closeLoginAlert()" class="close-alert-btn">Close</button>
+    </div>
+</div>
+
+<script>
+function closeLoginAlert() {
+    document.getElementById('loginAlert').style.display = 'none';
+}
+// Auto-close after 8 seconds
+setTimeout(closeLoginAlert, 8000);
+</script>
+
+<style>
+.login-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-left: 4px solid #007bff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    max-width: 350px;
+    animation: slideIn 0.5s ease-out;
+}
+.alert-content {
+    padding: 15px;
+}
+.alert-content h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 16px;
+}
+.alert-content p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #555;
+}
+.status-Success {
+    color: #28a745;
+    font-weight: bold;
+}
+.status-Fail {
+    color: #dc3545;
+    font-weight: bold;
+}
+.close-alert-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-size: 12px;
+}
+.close-alert-btn:hover {
+    background: #0056b3;
+}
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+</style>
+{{/if}}
+
 <div>
     <div id="nav-placeholder"> 
 
