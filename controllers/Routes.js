@@ -1004,7 +1004,7 @@ server.get('/manageRoles', isAuth, function(req, resp){
     responder.getUserByEmail(req.session.curUserMail)
     .then(user => {
         if(user.role == "admin"){
-            responder.getNonAdmin()
+            responder.getAdmin_roleA()
             .then(nonAdmin => {
                 resp.render('manageRolesTech', {
                 layout: 'manageRolesIndexTech',
@@ -1014,15 +1014,7 @@ server.get('/manageRoles', isAuth, function(req, resp){
             });
         });
         }else{
-            responder.getAllRoleB()
-            .then(roleB => {
-                resp.render('manageRoles-role-A', {
-                layout: 'manageRolesIndex-role-A',
-                title: 'Manage Role A',
-                date: getCurrentDate(),
-                resData: roleB
-            });
-            });
+
         }
             
     });

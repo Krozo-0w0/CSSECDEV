@@ -304,10 +304,10 @@ function getAllRoleB() {
 }
 module.exports.getAllRoleB = getAllRoleB;
 
-function getNonAdmin() {
+function getAdmin_roleA() {
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
-    const searchQuery = { role: { $in: ["roleA", "roleB"] } };
+    const searchQuery = { role: { $in: ["admin", "roleA"] } };
 
     return new Promise((resolve, reject) => {
         col.find(searchQuery).toArray()
@@ -315,7 +315,7 @@ function getNonAdmin() {
             .catch(err => reject(err));
     });
 }
-module.exports.getNonAdmin = getNonAdmin;
+module.exports.getAdmin_roleA = getAdmin_roleA;
 
 function getUserbyId(userId) {
     const dbo = mongoClient.db(databaseName);
