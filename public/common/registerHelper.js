@@ -20,7 +20,7 @@ $(document).ready(function(){
     // This checks if passwords match.
     $("#vpassword").on('input', function(){
         $.post(
-            'password_checker',
+            'password_checker', 
             {password: $("#password").val(), vpassword: $("#vpassword").val()},
             function(data, status){
                 if (status === 'success'){

@@ -82,7 +82,7 @@ function getUser(userEmail, userPassword) {
 module.exports.getUser = getUser;
 
 
-function addUser(userEmail, userName, userPassword, userVPassword, isTechnician, isRoleA){
+function addUser(userEmail, userName, userPassword, userVPassword,isTechnician){
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
     searchQuery = {email: userEmail};
@@ -104,20 +104,13 @@ function addUser(userEmail, userName, userPassword, userVPassword, isTechnician,
                     } else{
                         isTechnician = false;
                     }
-
-                    if(isRoleA === 'on'){
-                        isRoleA = true;
-                    } else{
-                        isRoleA = false;
-                    }
                     const info = {
                         email: userEmail,
                         password: userPassword,
                         isTechnician: isTechnician,
                         pfp: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
                         username: userName,
-                        bio: "",
-                        isRoleA: isRoleA
+                        bio: ""
                     };
                     col.insertOne(info).then(function(res){
                     }).catch(errorFn);

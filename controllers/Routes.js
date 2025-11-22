@@ -1,9 +1,8 @@
- //Routes
+//Routes
 const { timeEnd, info } = require('console');
 const responder = require('../models/Responder');
 const fs = require('fs');
 const session = require('express-session');
-const logger = require('../logger');
 
 
 
@@ -53,48 +52,6 @@ function isValidEmail(email) {
     return emailRegex.test(email);
 }
 
-function validateUsername(username) {
-    if (typeof username !== 'string') return false;
-    if (username.length < 3 || username.length > 50) return false;
-    const allowedChars = /^[a-zA-Z0-9 _]+$/;
-    return allowedChars.test(username);
-}
-
-function validatePassword(password) {
-    if (typeof password !== 'string') return false;
-    if (password.length < 8 || password.length > 128) return false;
-    const hasUpper = /[A-Z]/.test(password);
-    const hasLower = /[a-z]/.test(password);
-    const hasDigit = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-    return hasUpper && hasLower && hasDigit && hasSpecial;
-}
-
-function validateNumeric(value, min, max) {
-    const num = parseInt(value, 10);
-    return !isNaN(num) && num >= min && num <= max;
-}
-
-function validateLength(text, min, max) {
-    if (typeof text !== 'string') return false;
-    return text.length >= min && text.length <= max;
-}
-
-function validateAllowedChars(text, allowedRegex) {
-    if (typeof text !== 'string') return false;
-    return allowedRegex.test(text);
-}
-
-function validateDate(dateString) {
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date) && date >= new Date();
-}
-
-function validateTimeFrame(timeFrame) {
-    const timeRegex = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
-    return timeRegex.test(timeFrame);
-}
-
 
 function add(server){
 
@@ -136,47 +93,11 @@ const isAuthLogin = (req, res, next) => {
     }
 }
 
-const authorize = (requiredRoles) => {
-    return (req, res, next) => {
-        if (!req.session.isAuth) {
-            logger.warn(`Access control failure: Unauthorized access attempt to ${req.path} by IP ${req.ip}`);
-            req.session.errorMessage = 'Please log in to access this page.';
-            return res.redirect('/');
-        }
-
-        const user = req.session.curUserData;
-        if (!user) {
-            logger.warn(`Access control failure: Session expired for IP ${req.ip}`);
-            req.session.errorMessage = 'Session expired. Please log in again.';
-            return res.redirect('/');
-        }
-
-        // Check if user has at least one of the required roles
-        const hasRole = requiredRoles.some(role => {
-            if (role === 'technician') return user.isTechnician;
-            if (role === 'roleA') return user.isRoleA;
-            if (role === 'regular') return !user.isTechnician && !user.isRoleA;
-            return false;
-        });
-
-        if (!hasRole) {
-            logger.warn(`Access control failure: User ${user.email} attempted to access ${req.path} without permission`);
-            req.session.errorMessage = 'You do not have permission to access this page.';
-            return res.redirect('/mainMenu');
-        }
-
-        next();
-    };
-}
-
-// LOGIN load login page
+// LOGIN load login page 
 server.get('/', isAuthLogin, function(req, resp){
-    const errorMessage = req.session.errorMessage;
-    req.session.errorMessage = null; // Clear the message after displaying
     resp.render('login',{
       layout: 'loginIndex',
-      title: 'Login Page',
-      errMsg: errorMessage
+      title: 'Login Page'
     });
 });
 
@@ -211,15 +132,10 @@ server.post('/email_checker', function(req, resp){
 
  
 });
-// Ajax that checks if passwords match and validates password strength
+// Ajax that checks if passwords match (Will update on password requirements in the future.)
 server.post('/password_checker', function(req, resp){
     var password  = String(req.body.password);
     var vpassword = String(req.body.vpassword);
-
-    if (!validatePassword(password)) {
-        resp.send({match: 2, error: 'Password does not meet requirements'});
-        return;
-    }
 
     if(password === vpassword){
         resp.send({match : 1})
@@ -236,46 +152,8 @@ server.post('/register-checker', function(req, resp){
     var userPassword = String(req.body.password);
     var userVPassword = String(req.body.vpassword);
     var isTechnician = String(req.body.isTechnician);
-    var isRoleA = String(req.body.isRoleA);
 
-    // Validate inputs
-    if (!isValidEmail(userEmail)) {
-        resp.render('register',{
-            layout: 'registerIndex',
-            title: 'Register Page',
-            emailErrMsg: 'Invalid DLSU email format.'
-        });
-        return;
-    }
-
-    if (!validateUsername(userName)) {
-        resp.render('register',{
-            layout: 'registerIndex',
-            title: 'Register Page',
-            emailErrMsg: 'Username must be 3-50 characters, alphanumeric with spaces or underscores only.'
-        });
-        return;
-    }
-
-    if (!validatePassword(userPassword)) {
-        resp.render('register',{
-            layout: 'registerIndex',
-            title: 'Register Page',
-            emailErrMsg: 'Password must be 8-128 characters with at least one uppercase, lowercase, digit, and special character.'
-        });
-        return;
-    }
-
-    if (userPassword !== userVPassword) {
-        resp.render('register',{
-            layout: 'registerIndex',
-            title: 'Register Page',
-            emailErrMsg: 'Passwords do not match.'
-        });
-        return;
-    }
-
-    responder.addUser(userEmail, userName, userPassword, userVPassword,isTechnician, isRoleA)
+    responder.addUser(userEmail, userName, userPassword, userVPassword,isTechnician)
     .then(result => {
         if (result == "Success!"){
             resp.redirect('/');
@@ -299,61 +177,39 @@ server.post('/register-checker', function(req, resp){
     server.post('/login-checker', function(req, resp) {
         let userEmail = req.body.email;
         let userPassword = req.body.password;
-
-        // Validate inputs
-        if (!isValidEmail(userEmail)) {
-            logger.warn(`Input validation failure: Invalid email format for login attempt from IP ${req.ip}`);
-            resp.render('login',{
-                layout: 'loginIndex',
-                title: 'Login Page',
-                errMsg: 'Invalid email format'
-            });
-            return;
-        }
-
-        if (!validateLength(userPassword, 1, 128)) {
-            logger.warn(`Input validation failure: Invalid password length for login attempt from IP ${req.ip}`);
-            resp.render('login',{
-                layout: 'loginIndex',
-                title: 'Login Page',
-                errMsg: 'Invalid password length'
-            });
-            return;
-        }
-
          req.session.curUserMail = req.body.email;
 
         responder.getUser(userEmail, userPassword)
         .then(user => {
             if (user != null){
-                logger.info(`Authentication success: User ${userEmail} logged in successfully`);
                 req.session.isAuth = true;
-
+                
                 if(req.body.remember != 'on'){
-                    req.session.cookie.expires = false;
+                    req.session.cookie.expires = false; 
                 }
 
                 req.session.curUserData = user;
                 resp.redirect('/mainMenu');
-
+ 
             } else {
-                logger.warn(`Authentication failure: Failed login attempt for email ${userEmail} from IP ${req.ip}`);
                 resp.render('login',{
                     layout: 'loginIndex',
                     title: 'Login Page',
                     errMsg: 'Email and password don\'t match'
                 });
-            }
+            }             
         })
         .catch(error => {
-            logger.error(`Login error: ${error.message}`);
             console.error(error);
         });
 
     });
 
-// PROFILE
-server.get('/profile', authorize(['regular', 'roleA', 'technician']), function(req, resp) {
+// PROFILE 
+server.get('/profile', isAuth, function(req, resp) {
+
+    
+    
     responder.getReservedOfPerson( req.session.curUserData.email)
     .then(myReserves => {
 
@@ -379,7 +235,7 @@ server.get('/profile', authorize(['regular', 'roleA', 'technician']), function(r
 });
 
 //ABOUT PAGE
-server.get('/about', authorize(['regular', 'roleA', 'technician']), function(req, resp) {
+server.get('/about', isAuth, function(req, resp) {
     resp.render('about', {
         layout: 'aboutIndex',
         title: 'About Page',
@@ -387,66 +243,45 @@ server.get('/about', authorize(['regular', 'roleA', 'technician']), function(req
     });
 })
 
-// MAIN MENU
-server.get('/mainMenu', authorize(['regular', 'roleA', 'technician']), function(req, resp) {
+// MAIN MENU 
+server.get('/mainMenu', isAuth, function(req, resp) {
     req.session.isLabs = true;
-    
-    responder.getUserByEmail(req.session.curUserMail)
-    .then(name => {
-        if(req.query.labs != null){
-            let labs = [];
-            labs = JSON.parse(req.query.labs);
-            resp.render('mainMenu', {
-                layout: 'mainMenuIndex',
-                title: 'Main Menu',
-                labs: labs,
-                user:  req.session.curUserData
-            });
-        } else{
-        // get lab data for display
-        req.session.searchQuery = null;
-        responder.getLabs()
-        .then(labData => {
-            let seenLabs = [];
-            for (let i = 0; i < 3 && i < labData.length; i++){
-                seenLabs.push(labData[i]);
-            }
-            req.session.labPtr = seenLabs.length;
-
-            if(name.isTechnician){
-                resp.render('mainMenuTech', {
-                    layout: 'mainMenuIndexTech',
-                    title: 'Main Menu Technician',
-                    labs: seenLabs,
-                    user:  req.session.curUserData
-                });
-            }else if(name.isRoleA){
-                console.log("RoleA Main menu");
-                resp.render('mainMenu-role-A', {
-                    layout: 'mainMenuIndex-role-A',
-                    title: 'Main Menu Role A',
-                    labs: seenLabs,
-                    user:  req.session.curUserData
-                });
-            }else{
-                console.log("RoleB Main menu");
-                resp.render('mainMenu', {
-                    layout: 'mainMenuIndex',
-                    title: 'Main Menu',
-                    labs: seenLabs,
-                    user:  req.session.curUserData
-                });
-            }     
-        })
-        .catch(error => {
-            console.error(error);
+    if(req.query.labs != null){
+        let labs = [];
+        labs = JSON.parse(req.query.labs);
+        resp.render('mainMenu', {
+            layout: 'mainMenuIndex',
+            title: 'Main Menu',
+            labs: labs,
+            user:  req.session.curUserData
         });
+    } else{
+    // get lab data for display
+    req.session.searchQuery = null;
+    responder.getLabs()
+    .then(labData => {
+        let seenLabs = [];
+        for (let i = 0; i < 3 && i < labData.length; i++){
+            seenLabs.push(labData[i]);
         }
+         req.session.labPtr = seenLabs.length;
+
+        // render main menu
+        resp.render('mainMenu',{
+            layout: 'mainMenuIndex',
+            title: 'Main Menu',
+            labs: seenLabs,
+            user:  req.session.curUserData
+        });         
+    })
+    .catch(error => {
+        console.error(error);
     });
+    }
 });
 
 // delete profile
-server.post('/deleteProfile', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/deleteProfile', function(req, resp){
     responder.deleteProfile(req.session.curUserMail).then(function(){
         console.log("Profile delete success");
         req.session.destroy((err) => {
@@ -459,10 +294,10 @@ server.post('/deleteProfile', authorize(['regular', 'roleA', 'technician']), fun
 });
 
 // MAIN PAGE: NEXT BUTTON AJAX
-server.post('/nextBtn', authorize(['regular', 'roleA', 'technician']), function(req, resp) {
+server.post('/nextBtn', function(req, resp) {
     responder.getLabs()
     .then(labData => {
-
+        
         if ( req.session.labPtr < labData.length){
             req.session.seenLabs = [];
             i =  req.session.labPtr;
@@ -477,18 +312,18 @@ server.post('/nextBtn', authorize(['regular', 'roleA', 'technician']), function(
     .catch(error => {
         console.error(error);
     });
-
+    
 })
 
 // MAIN PAGE: BACK BUTTON AJAX
-server.post('/backBtn', authorize(['regular', 'roleA', 'technician']), function(req, resp) {
+server.post('/backBtn', function(req, resp) {
     responder.getLabs()
     .then(labData => {
-
+        
         if ( req.session.labPtr -  req.session.seenLabs.length > 0){
              req.session.labPtr -=  req.session.seenLabs.length;
             req.session.seenLabs = [];
-
+            
             i =  req.session.labPtr-3;
             while (i <  req.session.labPtr && i < labData.length){
                 req.session.seenLabs.push(labData[i]);
@@ -496,18 +331,21 @@ server.post('/backBtn', authorize(['regular', 'roleA', 'technician']), function(
             }
         }
         resp.send({labs:  req.session.seenLabs});
-
+        
     })
     .catch(error => {
         console.error(error);
     });
-
+    
 })
 
 //** Please keep new codes below this line, so its easier to append changes in the future. */
 
 // EDIT-PROFILE
-server.get('/edit-profile', authorize(['regular', 'roleA', 'technician']), function(req, resp) {
+server.get('/edit-profile', isAuth, function(req, resp) {
+
+ 
+    
     resp.render('edit-profile',{
         layout: 'profileIndex',
         title: 'Edit Profile',
@@ -515,7 +353,7 @@ server.get('/edit-profile', authorize(['regular', 'roleA', 'technician']), funct
     });
 })
 
-server.post('/deleteProfile', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/deleteProfile', function(req, resp){
     responder.deleteProfile( req.session.curUserMail).then(function(){
         console.log("Profile delete success");
         resp.redirect("/");
@@ -525,7 +363,7 @@ server.post('/deleteProfile', authorize(['regular', 'roleA', 'technician']), fun
 });
 
 // MAIN PAGE: SIDEBAR PEOPLE
-server.post('/load-people', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/load-people', function(req, resp){
     if( req.session.searchQuery != null){
         responder.userSearch( req.session.searchQuery)
         .then(users => {
@@ -544,7 +382,7 @@ server.post('/load-people', authorize(['regular', 'roleA', 'technician']), funct
     }
 })
 
-server.post('/load-labs', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/load-labs', function(req, resp){
     if( req.session.searchQuery != null){
         responder.labSearch( req.session.searchQuery)
         .then(labs => {
@@ -564,7 +402,7 @@ server.post('/load-labs', authorize(['regular', 'roleA', 'technician']), functio
 })
 
 
-server.post('/load-labsbyTags', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/load-labsbyTags', function(req, resp){
     if( req.session.searchQuery != null){
         responder.tagSearch( req.session.searchQuery)
         .then(labs => {
@@ -584,8 +422,11 @@ server.post('/load-labsbyTags', authorize(['regular', 'roleA', 'technician']), f
 })
 
 
+
+
+
 // PUBLIC PROFILE
-server.get('/public-profile/:id/', authorize(['regular', 'roleA', 'technician']), function(req, resp) {
+server.get('/public-profile/:id/', isAuth, function(req, resp) {
     req.session.isLabs = false;
  
     responder.getUserbyId(req.params.id)
@@ -607,15 +448,9 @@ server.get('/public-profile/:id/', authorize(['regular', 'roleA', 'technician'])
 })
 
 // CHANGE USERNAME
-server.post('/change_username', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/change_username', function(req, resp){
     var username  = String(req.body.username);
     var email =  req.session.curUserData.email;
-
-    // Validate username
-    if (!validateUsername(username)) {
-        resp.status(400).send({error: 'Invalid username format'});
-        return;
-    }
 
     responder.changeUsername( req.session.curUserData.email,req.body.username)
     .then(booleanValue=>{
@@ -633,21 +468,10 @@ server.post('/change_username', authorize(['regular', 'roleA', 'technician']), f
 });
 
 // CHANGE PASSWORD
-server.post('/change_password', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/change_password', function(req, resp){
 
     var password = String(req.body.password);
     var vpassword = String(req.body.vpassword);
-
-    // Validate password
-    if (!validatePassword(password)) {
-        resp.status(400).send({message: "Invalid password format"});
-        return;
-    }
-
-    if (password !== vpassword) {
-        resp.status(400).send({message: "Passwords do not match"});
-        return;
-    }
 
     responder.changePassword( req.session.curUserData.email,req.body.password,req.body.vpassword)
     .then(booleanValue =>{
@@ -662,9 +486,12 @@ server.post('/change_password', authorize(['regular', 'roleA', 'technician']), f
 });
 
 // LAB VIEW
-server.get('/labs/:id/', authorize(['regular', 'roleA', 'technician']), function(req, resp) {
+server.get('/labs/:id/', isAuth, function(req, resp) {
+
+ 
+
     console.log('LAB ID OF ' + req.params.id + '!!!!');
-    req.session.curLabId = req.params.id;
+     req.session.curLabId = req.params.id;
     let roomReservations = [];
     let room = [];
 
@@ -711,18 +538,6 @@ server.get('/labs/:id/', authorize(['regular', 'roleA', 'technician']), function
                                         date: getCurrentDate(),
                                         resData: reserveListAll
                                     });
-                                }else if (name.isRoleA){
-                                    resp.render('lab-view-role-A', {
-                                        layout: 'labIndex-role-A',
-                                        title: 'Lab View Role A',
-                                        user:  req.session.curUserData,
-                                        lab: curLab,
-                                        reserved: reserveList,
-                                        userRes: reserveUser,
-                                        dateData: dateData,
-                                        date: getCurrentDate(),
-                                        resData: reserveListAll
-                                    });
                                 }else{
                                     resp.render('lab-view', {
                                         layout: 'labIndex',
@@ -755,7 +570,7 @@ server.get('/labs/:id/', authorize(['regular', 'roleA', 'technician']), function
 
 })
 
-server.post('/labdetails', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/labdetails', function(req, resp){
 
     responder.getLabByName(req.body.roomNum)
     .then(curLab => {
@@ -768,7 +583,7 @@ server.post('/labdetails', authorize(['regular', 'roleA', 'technician']), functi
 });
 
 
-server.post("/modal", authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post("/modal", function(req, resp){
     responder.getLabByName(req.body.roomNum)
     .then(curLab => {
         responder.getReservedAll(curLab, req.body.date, req.body.timeFrame)
@@ -778,11 +593,11 @@ server.post("/modal", authorize(['regular', 'roleA', 'technician']), function(re
 
                 let modal = 'A';
                 let name;
-
+                
                 for(let i = 0; i < reservations.length; i++){
                     //if current seat is reserved
                     if(reservations[i]["seat"] == String(req.body.seat)){
-
+                        
                         name = reservations[i].name;
 
                         //if cur user is the one that reserved
@@ -809,7 +624,7 @@ server.post("/modal", authorize(['regular', 'roleA', 'technician']), function(re
                     }
                 }
 
-
+                
                 responder.getUserByName(name)
                 .then(user2 => {
                     resp.send({modal, name, user: user2});
@@ -833,7 +648,7 @@ server.post("/modal", authorize(['regular', 'roleA', 'technician']), function(re
 });
 
 
-server.post("/modalTech", authorize(['technician']), function(req, resp){
+server.post("/modalTech", function(req, resp){
     responder.getLabByName(req.body.roomNum)
     .then(curLab => {
         responder.getReservedAll(curLab, req.body.date, req.body.timeFrame)
@@ -843,11 +658,11 @@ server.post("/modalTech", authorize(['technician']), function(req, resp){
 
                 let modal = 'A';
                 let name;
-
+                
                 for(let i = 0; i < reservations.length; i++){
                     //if current seat is reserved
                     if(reservations[i]["seat"] == String(req.body.seat)){
-
+                        
                         name = reservations[i].name;
 
                         //if cur user is tech user
@@ -868,7 +683,7 @@ server.post("/modalTech", authorize(['technician']), function(req, resp){
                     }
                 }
 
-
+                
                 responder.getUserByName(name)
                 .then(user2 => {
                     resp.send({modal, name, user: user2});
@@ -891,7 +706,7 @@ server.post("/modalTech", authorize(['technician']), function(req, resp){
     });
 });
 
-server.post('/reserve', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/reserve', function(req, resp){
     const currentDate = new Date();
     const date = getCurrentDate();
 
@@ -903,50 +718,13 @@ server.post('/reserve', authorize(['regular', 'roleA', 'technician']), function(
 
     responder.getUserByEmail( req.session.curUserMail)
     .then(user=>{
-
+    
     var seat  = String(req.body.seat);
     var room  = String(req.body.room);
     var timeFrame  = String(req.body.timeFrame);
     var anon = req.body.anon == 'true';
     var resDate = req.body.date;
-    var walkin = user.isTechnician || user.isRoleA;
-
-    // Validate inputs
-    if (!validateNumeric(seat, 1, 1000)) { // Assuming max 1000 seats per lab
-        logger.warn(`Input validation failure: Invalid seat number for reservation by user ${user.email}`);
-        resp.status(400).send({error: 'Invalid seat number'});
-        return;
-    }
-
-    if (!validateLength(room, 1, 50)) {
-        logger.warn(`Input validation failure: Invalid room name for reservation by user ${user.email}`);
-        resp.status(400).send({error: 'Invalid room name'});
-        return;
-    }
-
-    if (!validateDate(resDate)) {
-        logger.warn(`Input validation failure: Invalid reservation date for reservation by user ${user.email}`);
-        resp.status(400).send({error: 'Invalid reservation date'});
-        return;
-    }
-
-    if (!validateTimeFrame(timeFrame)) {
-        logger.warn(`Input validation failure: Invalid time frame format for reservation by user ${user.email}`);
-        resp.status(400).send({error: 'Invalid time frame format'});
-        return;
-    }
-
-    if (walkin && !validateLength(req.body.name, 1, 50)) {
-        logger.warn(`Input validation failure: Invalid name for walk-in reservation by user ${user.email}`);
-        resp.status(400).send({error: 'Invalid name for walk-in reservation'});
-        return;
-    }
-
-    if (walkin && !isValidEmail(req.body.email)) {
-        logger.warn(`Input validation failure: Invalid email for walk-in reservation by user ${user.email}`);
-        resp.status(400).send({error: 'Invalid email for walk-in reservation'});
-        return;
-    }
+    var walkin = user.isTechnician;
 
     if(walkin){
         responder.addReservation(date+ "|" +time, req.body.name, req.body.email, resDate, seat, room, timeFrame, anon, walkin)
@@ -968,37 +746,41 @@ server.post('/reserve', authorize(['regular', 'roleA', 'technician']), function(
         };
 
         resp.send({status: "reserved", reserve: obj});
-
+                
     })
     .catch(error => {
         console.error(error);
     });
 
-
-
+    
+    
 });
 
-server.post('/getTimeFrames', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/getTimeFrames', function(req, resp){
 
-    responder.getLabById( req.session.curLabId)
-    .then(curLab => {
-        responder.getTimeslots(curLab, req.body.date)
-        .then(dateData => {
-            resp.send({dateData : dateData});
-
+    if(req.session.isAuth){
+        responder.getLabById( req.session.curLabId)
+        .then(curLab => {
+            responder.getTimeslots(curLab, req.body.date)
+            .then(dateData => { 
+                resp.send({dateData : dateData});
+                    
+            })
+            .catch(error => {
+                console.error(error);
+            });
+    
         })
         .catch(error => {
             console.error(error);
         });
-
-    })
-    .catch(error => {
-        console.error(error);
-    });
+    }else{
+        resp.redirect('/');
+    }
 
 })
 
-server.post('/dateChange', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/dateChange', function(req, resp){
     let roomReservations = [];
     let room = [];
     let timeFrame;
@@ -1023,7 +805,7 @@ server.post('/dateChange', authorize(['regular', 'roleA', 'technician']), functi
                 responder.getReservedYours(curLab, name, timeFrame)
                 .then(reserveUser => {
                         responder.getReservedAll(curLab, String(req.body.date), timeFrame)
-                        .then(reserveList => {
+                        .then(reserveList => { 
                             responder.getReservedAll2(curLab, String(req.body.date), timeFrame)
                             .then(reserveListAll => {
                                 // Access the resolved data here and extract room values
@@ -1033,19 +815,9 @@ server.post('/dateChange', authorize(['regular', 'roleA', 'technician']), functi
                                 //for the current user reservation
                                 reserveUser = reserveUser.map(entry => entry.seat);
                                 roomUser = reserveUser.map(entry => entry.room);
-
+                                
 
                                 if(name.isTechnician){
-                                    resp.send({
-                                        user:  req.session.curUserData,
-                                        lab: curLab,
-                                        reserved: reserveList,
-                                        userRes: reserveUser,
-                                        dateData: dateData,
-                                        date: req.body.date,
-                                        resData: reserveListAll
-                                    });
-                                }else if(name.isRoleA){
                                     resp.send({
                                         user:  req.session.curUserData,
                                         lab: curLab,
@@ -1096,7 +868,10 @@ server.post('/dateChange', authorize(['regular', 'roleA', 'technician']), functi
     });
 });
 
-server.get('/modifyLab', authorize(['technician']), function(req, resp){
+server.get('/modifyLab', isAuth, function(req, resp){
+
+ 
+
     responder.getLabById( req.session.curLabId)
     .then(curLab => {
         responder.getTimeslots(curLab, getCurrentDate())
@@ -1115,28 +890,11 @@ server.get('/modifyLab', authorize(['technician']), function(req, resp){
     .catch(error => {
         console.error(error);
     });
+
+
 });
 
-server.get('/manageRoles', authorize(['roleA', 'technician']), function(req, resp){
-    responder.getUserByEmail(req.session.curUserMail)
-    .then(user => {
-        if(user.isTechnician){
-            resp.render('manageRolesTech', {
-            layout: 'manageRolesIndexTech',
-            title: 'Manage Technician',
-            date: getCurrentDate()
-    });
-        }else{
-            resp.render('manageRoles-role-A', {
-            layout: 'manageRolesIndex-role-A',
-            title: 'Manage Role A',
-            date: getCurrentDate()
-    });
-        }
-    });
-});
-
-server.post('/changeModifyLab', authorize(['technician']), function(req, resp){
+server.post('/changeModifyLab', function(req, resp){
     responder.getLabById( req.session.curLabId)
     .then(curLab => {
         responder.getTimeslots(curLab, req.body.date)
@@ -1174,26 +932,7 @@ function sortByStartTime(array) {
     });
 }
 
-server.post('/save-profile', authorize(['regular', 'roleA', 'technician']), function(req, resp){
-
-    // Validate inputs
-    if (!validateUsername(req.body.username)) {
-        logger.warn(`Input validation failure: Invalid username for profile save by user ${req.session.curUserData.email}`);
-        resp.status(400).send('Invalid username');
-        return;
-    }
-
-    if (req.body.password && !validatePassword(req.body.password)) {
-        logger.warn(`Input validation failure: Invalid password for profile save by user ${req.session.curUserData.email}`);
-        resp.status(400).send('Invalid password');
-        return;
-    }
-
-    if (!validateLength(req.body.bio, 0, 500)) {
-        logger.warn(`Input validation failure: Bio too long for profile save by user ${req.session.curUserData.email}`);
-        resp.status(400).send('Bio too long');
-        return;
-    }
+server.post('/save-profile', function(req, resp){
 
     responder.updateProfile( req.session.curUserData.email, req.body.username, req.body.password, req.body['prof-pic'], req.body.bio)
     .then(whatever => {
@@ -1214,23 +953,8 @@ server.post('/save-profile', authorize(['regular', 'roleA', 'technician']), func
 
 });
 
-server.post('/searchFunction', authorize(['regular', 'roleA', 'technician']), function (req, resp) {
+server.post('/searchFunction', function (req, resp) {
     const searchString = req.body.stringInput;
-
-    // Validate search string
-    if (!validateLength(searchString, 1, 100)) {
-        logger.warn(`Input validation failure: Invalid search string length from IP ${req.ip}`);
-        resp.status(400).send('Invalid search string length');
-        return;
-    }
-
-    const allowedChars = /^[a-zA-Z0-9\s\-_]+$/;
-    if (!validateAllowedChars(searchString, allowedChars)) {
-        logger.warn(`Input validation failure: Invalid characters in search string from IP ${req.ip}`);
-        resp.status(400).send('Invalid characters in search string');
-        return;
-    }
-
     req.session.searchQuery = searchString;
     responder.roomSearch(searchString)
         .then(searchQueryResults => {
@@ -1250,7 +974,7 @@ server.post('/searchFunction', authorize(['regular', 'roleA', 'technician']), fu
         });
 });
 
-server.get('/editReservation', authorize(['regular', 'roleA', 'technician']), function (req, resp) {
+server.get('/editReservation', isAuth, function (req, resp) {
     responder.getLabByName(req.query.roomNum)
     .then(lab => {
         resp.redirect('/labs/' + lab._id);            
@@ -1260,7 +984,7 @@ server.get('/editReservation', authorize(['regular', 'roleA', 'technician']), fu
     });
 });
 
-server.post('/removeReservation', authorize(['regular', 'roleA', 'technician']), function (req, resp) {
+server.post('/removeReservation', function (req, resp) {
     responder.removeReservation(req.body.date, req.body.timeFrame, req.body.seat, req.body.room)
     .then(result =>{
         console.log('success update reservation');
@@ -1280,24 +1004,10 @@ server.get('/logout', function (req, resp) {
     });
 });
 
-server.post('/addTimeFrame', authorize(['technician']), function(req, resp){
+server.post('/addTimeFrame', function(req, resp){
     const date = req.body.date;
     const timeStart = req.body.timeStart;
     const timeEnd = req.body.timeEnd;
-
-    // Validate inputs
-    if (!validateDate(date)) {
-        logger.warn(`Input validation failure: Invalid date for addTimeFrame by technician ${req.session.curUserData.email}`);
-        resp.status(400).send({stat: "Invalid date"});
-        return;
-    }
-
-    const timeRegex = /^\d{2}:\d{2}$/;
-    if (!timeRegex.test(timeStart) || !timeRegex.test(timeEnd)) {
-        logger.warn(`Input validation failure: Invalid time format for addTimeFrame by technician ${req.session.curUserData.email}`);
-        resp.status(400).send({stat: "Invalid time format"});
-        return;
-    }
 
     var valid = true;
 
@@ -1307,7 +1017,7 @@ server.post('/addTimeFrame', authorize(['technician']), function(req, resp){
         responder.getAllTimeSlots(curLab.roomNum, date).then(function(timeSlots){
 
             for(let i = 0; i < timeSlots.length; i++){
-
+                
                 if(isTimeOutsideFrame(timeStart, timeSlots[i].timeStart, timeSlots[i].timeEnd)){
                     valid = false;
                 }
@@ -1328,24 +1038,10 @@ server.post('/addTimeFrame', authorize(['technician']), function(req, resp){
 
 });
 
-server.post("/deleteTimeFrame", authorize(['technician']), function(req, resp){
+server.post("/deleteTimeFrame", function(req, resp){
     const date = req.body.date;
     const timeStart = req.body.timeStart;
     const timeEnd = req.body.timeEnd;
-
-    // Validate inputs
-    if (!validateDate(date)) {
-        logger.warn(`Input validation failure: Invalid date for deleteTimeFrame by technician ${req.session.curUserData.email}`);
-        resp.status(400).send({stat: "Invalid date"});
-        return;
-    }
-
-    const timeRegex = /^\d{2}:\d{2}$/;
-    if (!timeRegex.test(timeStart) || !timeRegex.test(timeEnd)) {
-        logger.warn(`Input validation failure: Invalid time format for deleteTimeFrame by technician ${req.session.curUserData.email}`);
-        resp.status(400).send({stat: "Invalid time format"});
-        return;
-    }
 
     responder.getLabById( req.session.curLabId)
     .then(curLab => {
@@ -1379,7 +1075,7 @@ function completeReservation(){
 setInterval(completeReservation, 10000);
 
 
-server.post('/checkReserve', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/checkReserve', function(req, resp){
     responder.getLabById( req.session.curLabId)
     .then(curLab => {
         responder.getStatusSeat(curLab.roomNum, req.body.seat, req.body.timeFrame, req.body.date).then(function(result){
@@ -1392,22 +1088,27 @@ server.post('/checkReserve', authorize(['regular', 'roleA', 'technician']), func
     })
 });
 
-server.post('/loadReserve', authorize(['regular', 'roleA', 'technician']), function(req, resp){
+server.post('/loadReserve', function(req, resp){
 
-    const time = req.body.time;
-    const date = req.body.date;
+    if(req.session.isAuth){
+        const time = req.body.time;
+        const date = req.body.date;
 
-    responder.getLabById(req.session.curLabId).then(function(lab){
+        responder.getLabById(req.session.curLabId).then(function(lab){
 
-        responder.getReservedAll(lab, date, time).then(function(reservation){
-            responder.getReservedAll2(lab, date).then(function(resData){
-                resp.send({reservation, resData, lab});
-            });
+            responder.getReservedAll(lab, date, time).then(function(reservation){
+                responder.getReservedAll2(lab, date).then(function(resData){
+                    resp.send({reservation, resData, lab});
+                });
+
+            })
 
         })
-
-    })
-
+    } else{
+        console.log('check');
+        resp.send({status: "lol"});
+    }
+    
 });
 
 

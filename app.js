@@ -6,7 +6,7 @@ const express = require('express');
 const server = express();
 
 const bodyParser = require('body-parser');
-server.use(express.json());
+server.use(express.json()); 
 server.use(express.urlencoded({ extended: true }));
 
 const handlebars = require('express-handlebars');
@@ -15,14 +15,9 @@ server.engine('hbs', handlebars.engine({
     extname: 'hbs',
 }));
 
-server.use(express.static('public'));
 
-// Error handling middleware
-server.use((err, req, res, next) => {
-    const logger = require('./logger');
-    logger.error(`Unhandled error: ${err.message}`);
-    res.status(500).render('error', { message: 'An internal server error occurred.' });
-});
+
+server.use(express.static('public'));
 
 
 const Handlebars = require('handlebars');
