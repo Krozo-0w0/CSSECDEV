@@ -7,8 +7,6 @@ const { resourceLimits } = require('worker_threads');
 const { Timestamp } = require('mongodb');
 
 
-const test = "blablabll";
-
 function dateToVerbose(inputDate){
     const dateObject = new Date(inputDate);
 
