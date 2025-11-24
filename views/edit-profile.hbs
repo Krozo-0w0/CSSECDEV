@@ -1,32 +1,82 @@
- <main>
-        <h1>Edit Profile</h1>
-        <form action="/save-profile" method="post">
-            <table>
-                <tr>
-                    <td><label for="username">Username</label></td>
-                    <td class="col2"><input name="username" type="text" class="input" id="username" value="{{user.username}}"></td>
-                </tr>
-                <tr>
+<main>
+    <h1>Edit Profile</h1>
+    <form action="/save-profile" method="post">
+        <table>
+            <tr>
+                <td><label for="username">Username</label></td>
+                <td class="col2">
+                    <input name="username" type="text" class="input" id="username" value="{{user.username}}" maxlength="15">
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">Max 15 characters</div>
+                </td>
+            </tr>
+            <tr>
                 <td><label>Password</label></td>
                 <td class="col2">
                     <button type="button" id="changePasswordBtn" class="button">Change Password</button>
                 </td>
-                </tr>
-                <tr>
-                    <td><label for="prof-pic">Profile Picture</label></td>
-                    <td class="col2"><input name="prof-pic" type="text" class="input" id="prof-pic" value="{{user.pfp}}"></td>
-                </tr>
-                <tr>
-                    <td><label for="bio">Bio</label></td>
-                    <td class="col2"><textarea name="bio" class="input" id="bio">{{user.bio}}</textarea></td>
-                </tr>
-            </table>
-            <input type="submit" id="submit" value="Save">
-        </form>
-    </main>
+            </tr>
+            <tr>
+                <td><label for="prof-pic">Profile Picture</label></td>
+                <td class="col2"><input name="prof-pic" type="text" class="input" id="prof-pic" value="{{user.pfp}}"></td>
+            </tr>
+            <tr>
+                <td><label for="bio">Bio</label></td>
+                <td class="col2"><textarea name="bio" class="input" id="bio">{{user.bio}}</textarea></td>
+            </tr>
+        </table>
+        <input type="submit" id="submit" value="Save">
+    </form>
+</main>
 
 <script>
 document.getElementById('changePasswordBtn').addEventListener('click', function() {
     window.location.href = '/change-password-flow';
+});
+
+// Client-side validation for username length
+document.querySelector('form').addEventListener('submit', function(e) {
+    const usernameInput = document.getElementById('username');
+    if (usernameInput.value.length > 15) {
+        e.preventDefault();
+        alert('Error: Username must be 15 characters or less.');
+        usernameInput.focus();
+        return false;
+    }
+});
+
+// Real-time character counter with alert warning
+document.getElementById('username').addEventListener('input', function() {
+    const maxLength = 15;
+    const currentLength = this.value.length;
+    const counter = this.parentNode.querySelector('.char-counter') || 
+                   document.createElement('div');
+    
+    if (!counter.classList.contains('char-counter')) {
+        counter.className = 'char-counter';
+        counter.style.fontSize = '12px';
+        counter.style.marginTop = '5px';
+        this.parentNode.appendChild(counter);
+    }
+    
+    if (currentLength > maxLength) {
+        counter.style.color = 'red';
+        counter.textContent = `${currentLength}/${maxLength} characters - Too long!`;
+        
+        // Show alert when user exceeds character limit
+        if (currentLength === maxLength + 1) {
+            alert('Username cannot exceed 15 characters. Please shorten your username.');
+        }
+    } else {
+        counter.style.color = currentLength === maxLength ? 'orange' : '#666';
+        counter.textContent = `${currentLength}/${maxLength} characters`;
+    }
+});
+
+// Also validate on blur (when user leaves the field)
+document.getElementById('username').addEventListener('blur', function() {
+    if (this.value.length > 15) {
+        alert('Error: Username must be 15 characters or less. Current length: ' + this.value.length);
+        this.focus();
+    }
 });
 </script>
