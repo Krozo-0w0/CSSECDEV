@@ -108,3 +108,89 @@ main{
     align-items: center;
     position: absolute;
 }
+
+/* ===== GENERAL MODAL BACKGROUND ===== */
+.modal {
+    display: none; 
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.45);
+    justify-content: center;
+    align-items: center;
+}
+
+/* ===== SHARED MODAL BOX ===== */
+.modal-content {
+    background:#564F6F;
+    width: 350px;
+    padding: 25px;
+    border-radius: 10px;
+    position: relative;
+    text-align: left;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Fade animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== CLOSE BUTTON STYLE (shared) ===== */
+.close-btn, .close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #333;
+    transition: 0.2s;
+}
+
+.close-btn:hover, .close:hover {
+    color: #d00;
+}
+
+/* ===== BUTTON STYLE (shared) ===== */
+.modal-btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 15px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.25s ease;
+}
+
+.modal-btn:hover {
+    background: #217ab7;
+}
+
+/* Danger version (used for delete) */
+.modal-btn.danger {
+    background: #d9534f;
+}
+
+.modal-btn.danger:hover {
+    background: #b93d39;
+}
+
+/* Input fields shared */
+.modal-content input,
+.modal-content select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    margin-bottom: 12px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}

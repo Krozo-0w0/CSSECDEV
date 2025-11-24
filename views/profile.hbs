@@ -9,7 +9,7 @@
             <form action="edit-profile" method="get">
                 <button type="submit" class="save">Edit profile</button>
             </form>
-            <button type="button" class="delete" id="del-prof-confirm">Delete profile</button>
+            <button type="button" class="delete-button">Delete profile</button>
         </div>
         <h2>Current Reservations:</h2>
 
@@ -28,9 +28,17 @@
         </details>
         {{/each}}
 
-        <div id="del-prof">
-            <p class="message" id="del-prof-msg">Confirm delete profile?</p>
-            <button class="delete" id="del-prof-btn">Proceed</button>
-            <button class="save" id="save-prof-btn">Cancel</button>
+        <!-- PASSWORD CONFIRMATION MODAL -->
+        <div id="passwordConfirmModal" class="modal" style="display:none; justify-content:center; align-items:center;">
+            <div class="modal-content" style="width: 350px;">
+                <span id="closePasswordModal" class="close">&times;</span>
+                <h3>Confirm Deletion</h3>
+                <p id="passwordModalText"></p>
+
+                <label for="adminPassword">Enter your password:</label>
+                <input type="password" id="adminPassword" class="form-control" placeholder="Password">
+
+                <button id="confirmDeleteBtn" class="btn btn-danger" style="margin-top: 15px;">Delete User</button>
+            </div>
         </div>
     </main>

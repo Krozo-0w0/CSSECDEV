@@ -5,17 +5,19 @@ $(document).ready(function() {
     const $saveRoleBtn = $("#saveRoleBtn");
     let selectedUserEmail = null;
 
-    // Open modal
+    // Open Assign Role modal
     $(".assign-button").on("click", function() {
         const $row = $(this).closest("tr");
         const email = $row.find("td:nth-child(1)").text().trim();
         const username = $row.find("td:nth-child(2)").text().trim();
+
         selectedUserEmail = email;
         $selectedUserText.text(`Assign role for ${username} (${email})`);
+
         $modal.css("display", "flex");
     });
 
-    // Close modal
+    // Close Assign Modal
     $("#closeAssignModal").on("click", () => $modal.hide());
     $(window).on("click", (e) => {
         if (e.target.id === "assignModal") $modal.hide();
@@ -41,19 +43,53 @@ $(document).ready(function() {
         });
     });
 
-    // ===== DELETE USER =====
+
+
+    // ===== DELETE USER WITH PASSWORD CONFIRMATION =====
+    const $passwordModal = $("#passwordConfirmModal");
+    const $passwordModalText = $("#passwordModalText");
+    let userToDelete = null;
+
     $(".delete-button").on("click", function() {
         const email = $(this).closest("tr").find("td:first").text().trim();
 
-        if (confirm(`Are you sure you want to delete ${email}?`)) {
-            $.post('/deleteUser', { email: email }, function(data, status) {
-                if (status === 'success' && data.status === "success") {
-                    alert(`${email} successfully deleted.`);
-                    window.location.reload();
-                } else {
-                    alert(`Failed to delete ${email}.`);
-                }
-            });
+        userToDelete = email;
+        $passwordModalText.text(`Please enter your password to delete ${email}.`);
+
+        $("#adminPassword").val(""); // clear previous input
+        $passwordModal.css("display", "flex");
+    });
+
+    // Close Password Modal
+    $("#closePasswordModal").on("click", () => $passwordModal.hide());
+
+    $(window).on("click", (e) => {
+        if (e.target.id === "passwordConfirmModal") $passwordModal.hide();
+    });
+
+    // Confirm Delete
+    $("#confirmDeleteBtn").on("click", function() {
+        const password = $("#adminPassword").val().trim();
+
+        if (!password) {
+            alert("Please enter your password.");
+            return;
         }
+
+        $passwordModal.hide();
+
+        $.post('/deleteUser', { 
+            email: userToDelete,
+            adminPassword: password
+        }, function(data, status) {
+            if (status === "success" && data.status === "success") {
+                alert(`${userToDelete} successfully deleted.`);
+                window.location.reload();
+            } else if (data.status === "error2"){
+                alert(`Incorrect Password.`);
+            }else{
+                alert(data.message || `Failed to delete ${userToDelete}.`);
+            }
+        });
     });
 });

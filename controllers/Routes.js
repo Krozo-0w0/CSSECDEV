@@ -71,33 +71,48 @@ server.use(session({
     }
   }));
 
-const isAuth = (req, res, next) => {
-    if(req.session.isAuth){
-        next();
-    }else{
-        responder.addLogs("N/A", "N/A", `Unkown user Accessing ${req.url}`, "Fail");
-        res.redirect('/');  
-    }
-}
 
-const isAuthLabs = (req, res, next) => {
-    if(req.session.isLabs){
-        next();
-    }else{
-        res.redirect('/mainpage');
-    }
-}
+const isAuth = (allowedRoles) => {
+    const rolesArray = Array.isArray(allowedRoles)
+        ? allowedRoles
+        : allowedRoles ? [allowedRoles] : [];
 
-const isAuthLogin = (req, res, next) => {
-    if(req.session.isAuth){
-        res.redirect('/mainMenu');
-    }else{
-        next();
-    }
-}
+    return async (req, res, next) => {
+        try {
+            // 1. Unauthenticated users trying to access anything except "/"
+            if (!req.session?.isAuth) {
+                if (req.url === "/") return next();
+                return errorPage(404, `Unknown user accessing ${req.url}`, req, res);
+            }
+
+            // 2. Authenticated users accessing login page → redirect
+            if (req.url === "/") {
+                return res.redirect('/mainMenu');
+            }
+
+            // 3. If role restrictions exist, validate from DB
+            if (rolesArray.length > 0) {
+                const user = await responder.getUserByEmail(req.session.curUserMail);
+
+                if (!rolesArray.includes(user.role)) {
+                    return errorPage(403, `Invalid Access: Tried to access ${req.url}`, req, res);
+                }
+            }
+
+            // 4. All good
+            return next();
+
+        } catch (error) {
+            return errorPage(500, error.message || error, req, res);
+        }
+    };
+};
+
+
+
 
 // LOGIN load login page 
-server.get('/', isAuthLogin,function(req, resp){
+server.get('/', isAuth(),function(req, resp){
     resp.render('login',{
       layout: 'loginIndex',
       title: 'Login Page'
@@ -373,7 +388,7 @@ server.post('/login-checker', function(req, resp) {
 });
 
 // PROFILE 
-server.get('/profile', isAuth, function(req, resp) {
+server.get('/profile', isAuth(), function(req, resp) {
     responder.getReservedOfPerson( req.session.curUserData.email)
     .then(myReserves => {
 
@@ -399,7 +414,7 @@ server.get('/profile', isAuth, function(req, resp) {
 });
 
 //ABOUT PAGE
-server.get('/about', isAuth, function(req, resp) {
+server.get('/about', isAuth(), function(req, resp) {
     resp.render('about', {
         layout: 'aboutIndex',
         title: 'About Page',
@@ -408,7 +423,7 @@ server.get('/about', isAuth, function(req, resp) {
 })
 
 // MAIN MENU 
-server.get('/mainMenu', isAuth, function(req, resp) {
+server.get('/mainMenu', isAuth(), function(req, resp) {
     req.session.isLabs = true;
 
     console.log('req.session.showLoginStatus:', req.session.showLoginStatus);
@@ -507,7 +522,7 @@ server.get('/mainMenu', isAuth, function(req, resp) {
 });
 
 // delete profile
-server.post('/deleteProfile', function(req, resp){
+server.post('/deleteProfile', isAuth(), function(req, resp){
     responder.getUserByEmail(req.session.curUserMail).then(user=> {
         responder.addLogs(req.session.curUserMail, user.role, `User Deleted.`, "Success");
     }).catch(error => {
@@ -573,7 +588,7 @@ server.post('/backBtn', function(req, resp) {
 //** Please keep new codes below this line, so its easier to append changes in the future. */
 
 // EDIT-PROFILE
-server.get('/edit-profile', isAuth, function(req, resp) {
+server.get('/edit-profile', isAuth(), function(req, resp) {
     resp.render('edit-profile',{
         layout: 'profileIndex',
         title: 'Edit Profile',
@@ -581,7 +596,7 @@ server.get('/edit-profile', isAuth, function(req, resp) {
     });
 })
 
-server.post('/deleteProfile', function(req, resp){
+server.post('/deleteProfile', isAuth(), function(req, resp){
     responder.getUserByEmail(req.session.curUserMail).then(user=> {
         responder.addLogs(req.session.curUserMail, user.role, `User Deleted.`, "Success");
     }).catch(error => {
@@ -596,7 +611,7 @@ server.post('/deleteProfile', function(req, resp){
 });
 
 // MAIN PAGE: SIDEBAR PEOPLE
-server.post('/load-people', function(req, resp){
+server.post('/load-people', isAuth(), function(req, resp){
     if( req.session.searchQuery != null){
         responder.userSearch( req.session.searchQuery)
         .then(users => {
@@ -615,7 +630,7 @@ server.post('/load-people', function(req, resp){
     }
 })
 
-server.post('/load-labs', function(req, resp){
+server.post('/load-labs', isAuth(), function(req, resp){
     if( req.session.searchQuery != null){
         responder.labSearch( req.session.searchQuery)
         .then(labs => {
@@ -630,7 +645,7 @@ server.post('/load-labs', function(req, resp){
 })
 
 
-server.post('/load-labsbyTags', function(req, resp){
+server.post('/load-labsbyTags', isAuth(), function(req, resp){
     if( req.session.searchQuery != null){
         responder.tagSearch( req.session.searchQuery)
         .then(labs => {
@@ -646,7 +661,7 @@ server.post('/load-labsbyTags', function(req, resp){
 
 
 // PUBLIC PROFILE
-server.get('/public-profile/:id/', isAuth, function(req, resp) {
+server.get('/public-profile/:id/', isAuth(), function(req, resp) {
     req.session.isLabs = false;
  
     responder.getUserbyId(req.params.id)
@@ -665,7 +680,7 @@ server.get('/public-profile/:id/', isAuth, function(req, resp) {
 })
 
 // CHANGE USERNAME
-server.post('/change_username', function(req, resp){
+server.post('/change_username', isAuth(), function(req, resp){
     var username  = String(req.body.username);
     var email =  req.session.curUserData.email;
 
@@ -695,7 +710,7 @@ server.post('/change_username', function(req, resp){
 });
 
 // CHANGE PASSWORD
-server.post('/change_password', function(req, resp){
+server.post('/change_password', isAuth(), function(req, resp){
 
     var password = String(req.body.password);
     var vpassword = String(req.body.vpassword);
@@ -717,7 +732,7 @@ server.post('/change_password', function(req, resp){
 });
 
 // LAB VIEW
-server.get('/labs/:id/', isAuth, function(req, resp) {
+server.get('/labs/:id/', isAuth(), function(req, resp) {
     console.log('LAB ID OF ' + req.params.id + '!!!!');
     req.session.curLabId = req.params.id;
     let roomReservations = [];
@@ -805,7 +820,7 @@ server.get('/labs/:id/', isAuth, function(req, resp) {
 
 })
 
-server.post('/labdetails', function(req, resp){
+server.post('/labdetails', isAuth(), function(req, resp){
 
     responder.getLabByName(req.body.roomNum)
     .then(curLab => {
@@ -815,7 +830,7 @@ server.post('/labdetails', function(req, resp){
 });
 
 
-server.post("/modal", function(req, resp){
+server.post("/modal", isAuth(), function(req, resp){
     responder.getLabByName(req.body.roomNum)
     .then(curLab => {
         responder.getReservedAll(curLab, req.body.date, req.body.timeFrame)
@@ -871,7 +886,7 @@ server.post("/modal", function(req, resp){
 });
 
 
-server.post("/modalTech", function(req, resp){
+server.post("/modalTech", isAuth(), function(req, resp){
     responder.getLabByName(req.body.roomNum)
     .then(curLab => {
         responder.getReservedAll(curLab, req.body.date, req.body.timeFrame)
@@ -921,7 +936,7 @@ server.post("/modalTech", function(req, resp){
     .catch(error => { errorPage(500, error, req, resp); });
 });
 
-server.post('/reserve', function(req, resp){
+server.post('/reserve', isAuth(), function(req, resp){
     const currentDate = new Date();
     const date = getCurrentDate();
 
@@ -1086,7 +1101,7 @@ server.post('/dateChange', function(req, resp){
     .catch(error => { errorPage(500, error, req, resp); });
 });
 
-server.get('/modifyLab', isAuth, function(req, resp){
+server.get('/modifyLab', isAuth(["admin", "roleA"]), function(req, resp){
     responder.getLabById( req.session.curLabId)
     .then(curLab => {
         responder.getTimeslots(curLab, getCurrentDate())
@@ -1105,67 +1120,46 @@ server.get('/modifyLab', isAuth, function(req, resp){
     });
 });
 
-server.get('/manageRoles', isAuth, function(req, resp){
-    responder.getUserByEmail(req.session.curUserMail)
-    .then(user => {
-        if(user.role == "admin"){
-            responder.getAllUsers()
-            .then(nonAdmin => {
-                resp.render('manageRolesTech', {
-                layout: 'manageRolesIndexTech',
-                title: 'Manage Technician',
-                date: getCurrentDate(),
-                resData: nonAdmin
-            });
-        }).catch(error => { errorPage(500, error, req, resp); });
-        }else{
-            errorPage(403, "Invalid Access: Tried to access /manageRoles", req, resp);
-        }
-            
+server.get('/manageRoles', isAuth("admin"), function(req, resp){
+    responder.getAllUsers()
+    .then(nonAdmin => {
+        resp.render('manageRolesTech', {
+        layout: 'manageRolesIndexTech',
+        title: 'Manage Technician',
+        date: getCurrentDate(),
+        resData: nonAdmin
+    });
     }).catch(error => { errorPage(500, error, req, resp); });
 });
 
-server.get('/viewLogs', isAuth, function(req, resp){
-    responder.getUserByEmail(req.session.curUserMail)
-    .then(user => {
-            if(user.role == "admin"){
-                responder.getLogs()
-                .then(logs => {
-                    resp.render('viewLogs', {
-                    layout: 'viewLogs',
-                    title: 'View Logs',
-                    resData: logs
-                });
-            }).catch(error => { errorPage(500, error, req, resp); }); 
-            }else{
-                errorPage(403, "Invalid Access: Tried to access viewLogs", req, resp);
-            }
-    }).catch(error => { errorPage(500, error, req, resp); });
+server.get('/viewLogs', isAuth("admin"), function(req, resp){
+
+    responder.getLogs()
+        .then(logs => {
+            resp.render('viewLogs', {
+            layout: 'viewLogs',
+            title: 'View Logs',
+            resData: logs
+        });
+    }).catch(error => { errorPage(500, error, req, resp); }); 
+
 });
 
-server.post('/filterLogs', isAuth, function (req, resp) {
+server.post('/filterLogs', isAuth("admin"), function (req, resp) {
 
     const { email, action, status, fromDate, toDate, role } = req.body;
 
-    responder.getUserByEmail(req.session.curUserMail)
-        .then(user => {
-            if (user.role === "admin") {
-                responder.filterLogs(email, action, role, status, fromDate, toDate)
-                    .then(logs => {
-                        resp.send({ log: logs });
-                    })
-                    .catch(err => {
-                        errorPage(500, err, req, resp);
-                    });
-
-            } else {
-                errorPage(403, "Invalid Access: Tried to use filterLogs", req, resp);
-            }
-        }).catch(error => { errorPage(500, error, req, resp); });
+    responder.filterLogs(email, action, role, status, fromDate, toDate)
+        .then(logs => {
+            resp.send({ log: logs });
+        })
+        .catch(err => {
+            errorPage(500, err, req, resp);
+    });
 });
 
 
-server.post('/changeModifyLab', function(req, resp){
+server.post('/changeModifyLab', isAuth(["admin", "roleA"]),function(req, resp){
     responder.getLabById( req.session.curLabId)
     .then(curLab => {
         responder.getTimeslots(curLab, req.body.date)
@@ -1201,7 +1195,7 @@ function sortByStartTime(array) {
     });
 }
 
-server.post('/save-profile', function(req, resp){
+server.post('/save-profile', isAuth(), function(req, resp){
     var username = String(req.body.username);
     var bio = String(req.body.bio);
     
@@ -1241,7 +1235,7 @@ server.post('/save-profile', function(req, resp){
 
 });
 
-server.post('/searchFunction', function (req, resp) {
+server.post('/searchFunction', isAuth(), function (req, resp) {
     const searchString = req.body.stringInput;
     req.session.searchQuery = searchString;
     responder.roomSearch(searchString)
@@ -1258,7 +1252,7 @@ server.post('/searchFunction', function (req, resp) {
         .catch(error => { errorPage(500, error, req, resp); });
 });
 
-server.get('/editReservation', isAuth, function (req, resp) {
+server.get('/editReservation', isAuth(), function (req, resp) {
     responder.getLabByName(req.query.roomNum)
     .then(lab => {
         resp.redirect('/labs/' + lab._id);            
@@ -1266,7 +1260,7 @@ server.get('/editReservation', isAuth, function (req, resp) {
     .catch(error => { errorPage(500, error, req, resp); });
 });
 
-server.post('/removeReservation', function (req, resp) {
+server.post('/removeReservation', isAuth(), function (req, resp) {
     responder.removeReservation(req.body.date, req.body.timeFrame, req.body.seat, req.body.room)
     .then(result =>{
         responder.getUserByEmail(req.session.curUserMail).then(user=> {
@@ -1284,7 +1278,7 @@ server.post('/removeReservation', function (req, resp) {
     });
 });
 
-server.get('/logout', function (req, resp) {
+server.get('/logout', isAuth(), function (req, resp) {
     const userEmail = req.session.curUserMail;
     responder.getUserByEmail(userEmail).then(user=> {
         responder.addLogs(userEmail, user.role,`User logout`, "Success");
@@ -1296,7 +1290,7 @@ server.get('/logout', function (req, resp) {
     });
 });
 
-server.post('/addTimeFrame', function(req, resp){
+server.post('/addTimeFrame', isAuth(["admin", "roleA"]), function(req, resp){
     const date = req.body.date;
     const timeStart = req.body.timeStart;
     const timeEnd = req.body.timeEnd;
@@ -1333,7 +1327,7 @@ server.post('/addTimeFrame', function(req, resp){
 
 });
 
-server.post("/deleteTimeFrame", function(req, resp){
+server.post("/deleteTimeFrame", isAuth("admin", "roleA"), function(req, resp){
     const date = req.body.date;
     const timeStart = req.body.timeStart;
     const timeEnd = req.body.timeEnd;
@@ -1373,7 +1367,7 @@ function completeReservation(){
 setInterval(completeReservation, 10000);
 
 
-server.post('/checkReserve', function(req, resp){
+server.post('/checkReserve', isAuth(), function(req, resp){
     responder.getLabById( req.session.curLabId)
     .then(curLab => {
         responder.getStatusSeat(curLab.roomNum, req.body.seat, req.body.timeFrame, req.body.date).then(function(result){
@@ -1386,7 +1380,7 @@ server.post('/checkReserve', function(req, resp){
     }).catch(error => { errorPage(500, error, req, resp); });
 });
 
-server.post('/loadReserve', function(req, resp){
+server.post('/loadReserve', isAuth(), function(req, resp){
 
     if(req.session.isAuth){
         const time = req.body.time;
@@ -1432,7 +1426,7 @@ function completeReservation(){
 setInterval(completeReservation, 10000);
 
 
-server.post('/checkReserve', function(req, resp){
+server.post('/checkReserve', isAuth(), function(req, resp){
     responder.getLabById(req.session.curLabId)
     .then(curLab => {
         responder.getStatusSeat(curLab.roomNum, req.body.seat, req.body.timeFrame, req.body.date).then(function(result){
@@ -1489,7 +1483,7 @@ function isTimeOutsideFrame(time, startTime, endTime) {
     }
 }
 
-server.post('/assign_role', function(req, resp){
+server.post('/assign_role', isAuth("admin"), function(req, resp){
     const email = req.body.email;
     const newRole = req.body.role;
 
@@ -1498,44 +1492,60 @@ server.post('/assign_role', function(req, resp){
 
     responder.getUserByEmail( req.session.curUserMail)
     .then(user=>{
-
-    responder.getUserByEmail(req.session.curUserMail)
-    .then(curuser => {
-        if(curuser.role == "admin"){
-            responder.updateRole(email, newRole)
-            .then(result => {
-                if(result){
-                    responder.addLogs(req.session.curUserMail, user.role,`User assigned new role: ${newRole} to user ${email}`, "Success");
-                    resp.send({status: "success"});
-                }else{
-                    responder.addLogs(req.session.curUserMail, user.role,`User Failed to assign new role: ${newRole} to user ${email}`, "Fail");
-                    resp.send({status: "error"});
-                }
-            });
-        }else{
-            errorPage(403, "Invalid Access: Tried to access assign_role", req, resp);
-        }
-    }).catch(error => { errorPage(500, error, req, resp); });
-
+        responder.updateRole(email, newRole)
+        .then(result => {
+            if(result){
+                responder.addLogs(req.session.curUserMail, user.role,`User assigned new role: ${newRole} to user ${email}`, "Success");
+                resp.send({status: "success"});
+            }else{
+                responder.addLogs(req.session.curUserMail, user.role,`User Failed to assign new role: ${newRole} to user ${email}`, "Fail");
+                resp.send({status: "error"});
+            }
+        });
     })
     .catch(error => { errorPage(500, error, req, resp); });
 });
 
-server.post('/deleteUser', function(req, resp){
-    responder.deleteProfile( req.body.email)
-    .then(result => {
-        if(result){
-            responder.getUserByEmail(req.session.curUserMail).then(user=> {
-                responder.addLogs(req.session.curUserMail, user.role,`User deleted user ${req.body.email}`, "Success");
-            }).catch(error => { errorPage(500, error, req, resp); });
-            resp.send({status: "success"});
-        }else{
-            responder.getUserByEmail(req.session.curUserMail).then(user=> {
-                responder.addLogs(req.session.curUserMail, user.role,`User failed to deleted user ${req.body.email}`, "Fail");
-            }).catch(error => { errorPage(500, error, req, resp); });
-            resp.send({status: "error"});
+server.post("/deleteUser", isAuth(), async (req, resp) => {
+    try {
+        const curuser = req.session.curUserMail;
+        const adminPassword = req.body.adminPassword;
+        const targetEmail = req.body.email;
+
+        const user = await responder.getUserByEmail(curuser);
+
+        if (!user) {
+            return resp.send({ status: "error", message: "Admin not found" });
         }
-    }).catch(error => { errorPage(500, error, req, resp); });
+
+        const authResult = await responder.verifyCredentials(curuser, adminPassword);
+
+        if (!authResult.valid) {
+            await responder.addLogs(curuser, user.role, `Incorrect Password to delete user ${targetEmail}`, "Fail");
+            return resp.send({ status: "error2" });
+        }
+        var result;
+
+        if(user === "admin"){
+            result = await responder.deleteProfile(targetEmail);
+        }else{
+            result = await responder.deleteProfile(curuser);
+        }
+
+        if (result) {
+            await responder.addLogs(curuser, user.role, `User deleted user ${targetEmail}`, "Success");
+            
+            return resp.send({ status: "success" });
+
+        } else {
+            await responder.addLogs(curuser, user.role, `User failed to delete user ${targetEmail}`, "Fail");
+            return resp.send({ status: "error" });
+        }
+
+    } catch (error) {
+        console.error("🔥 Error in deleteUser:", error);
+        return errorPage(500, error, req, resp);
+    }
 });
 
 //johans - forgot password route
@@ -1767,7 +1777,7 @@ server.post('/forgot-password-reset', async function(req, res) {
 });
 
 // CHANGE PASSWORD FLOW - For authenticated users
-server.get('/change-password-flow', isAuth, function(req, res) {
+server.get('/change-password-flow', isAuth(), function(req, res) {
   res.render('change-password', {
     layout: 'loginIndex',
     title: 'Change Password',
@@ -1776,7 +1786,7 @@ server.get('/change-password-flow', isAuth, function(req, res) {
 });
 
 // Verify current password
-server.post('/change-password-verify-current', isAuth, async function(req, res) {
+server.post('/change-password-verify-current', isAuth(), async function(req, res) {
   const { email, currentPassword } = req.body;
   const userEmail = req.session.curUserData.email;
 
@@ -1829,7 +1839,7 @@ server.post('/change-password-verify-current', isAuth, async function(req, res) 
 });
 
 // Final password change
-server.post('/change-password-final', isAuth, async function(req, res) {
+server.post('/change-password-final', isAuth(), async function(req, res) {
   const { email, token, newPassword, confirmPassword } = req.body;
   const changeData = req.session.passwordChange;
   const userEmail = req.session.curUserData.email;
