@@ -97,12 +97,12 @@ function getUser(userEmail, userPassword) {
                     // if successful = failed attempts resets and unlocked while also updating last login
                     col.updateOne(
                         { email: userEmail },
-                        { $set: { failedAttempts: 0, lockUntil: null, lastLogin: new Date(), lastLoginStatus: "Success"} }
+                        { $set: { failedAttempts: 0, lockUntil: null} }
                     );
                     resolve(user);
                 } else {
                     let attempts = (user.failedAttempts || 0) + 1;
-                    let update = { failedAttempts: attempts, lastLogin: new Date(), lastLoginStatus: "Fail" };
+                    let update = { failedAttempts: attempts };
                     
                     // If max attempts = goodbye! lock the account lol
                     if (attempts >= MAX_ATTEMPTS) {
@@ -128,13 +128,23 @@ function verifyCredentials(userEmail, userPassword) {
     return new Promise((resolve, reject) => {
         col.findOne({ email: userEmail }).then(function (user) {
             if (!user) {
-                resolve(null);
+                // User not found - return proper object structure
+                resolve({ 
+                    valid: false, 
+                    user: null, 
+                    locked: false,
+                    userNotFound: true  // Add this flag to distinguish from wrong password
+                });
                 return;
             }
 
             if (user.lockUntil && user.lockUntil > Date.now()) {
                 console.log(`Account ${userEmail} is locked until ${user.lockUntil}`);
-                resolve({ locked: true });
+                resolve({ 
+                    valid: false, 
+                    user: user, 
+                    locked: true 
+                });
                 return;
             }
 
@@ -143,20 +153,24 @@ function verifyCredentials(userEmail, userPassword) {
                     { email: userEmail },
                     { $set: { lockUntil: null, failedAttempts: 0 } }
                 );
+                // Update the user object to reflect the unlock
+                user.lockUntil = null;
+                user.failedAttempts = 0;
             }
 
             bcrypt.compare(userPassword, user.password, function (err, result) {
                 if (result) {
-                    // if successful = failed attempts resets and unlocked while also updating last login
                     resolve({ 
                         valid: true, 
                         user: user,
                         needsUnlock: user.failedAttempts > 0 || user.lockUntil !== null
                     });
                 } else {
-                    // If max attempts = goodbye! lock the account lol
                     let attempts = (user.failedAttempts || 0) + 1;
-                    let update = { failedAttempts: attempts, lastLoginStatus: "Fail" };
+                    let update = { 
+                        failedAttempts: attempts, 
+                        lastLoginStatus: "Fail" 
+                    };
                     
                     if (attempts >= MAX_ATTEMPTS) {
                         update.lockUntil = new Date(Date.now() + LOCK_DURATION);
@@ -164,7 +178,11 @@ function verifyCredentials(userEmail, userPassword) {
                     }
 
                     col.updateOne({ email: userEmail }, { $set: update });
-                    resolve({ valid: false, locked: attempts >= MAX_ATTEMPTS });
+                    resolve({ 
+                        valid: false, 
+                        user: user, 
+                        locked: attempts >= MAX_ATTEMPTS 
+                    });
                 }
             });
         }).catch(reject);
@@ -202,15 +220,16 @@ function updateFailedLogin(userEmail) {
     return new Promise((resolve, reject) => {
         col.findOne({ email: userEmail }).then(function(user) {
             if (!user) {
+                // If user doesn't exist, we can't update failed attempts
                 resolve(false);
                 return;
             }
 
             let attempts = (user.failedAttempts || 0) + 1;
             let update = { 
-                failedAttempts: attempts, 
                 lastLogin: new Date(),
-                lastLoginStatus: "Fail" 
+                lastLoginStatus: "Fail"
+                // NOTE: We're NOT updating lastLogin here to preserve the original timestamp
             };
             
             if (attempts >= MAX_ATTEMPTS) {
@@ -281,60 +300,72 @@ function addUser(userEmail, userName, userPassword, userVPassword, role, securit
     const dbo = mongoClient.db(databaseName);
     const col = dbo.collection(colUsers);
     searchQuery = {email: userEmail};
+    usernameQuery = {username: userName};
+    
     return new Promise((resolve, reject) => {
         col.findOne(searchQuery).then(function(val){
-            console.log(userPassword);
-            console.log(userVPassword);
             if (val != null){
                 resolve('Email already in use.');
-            } else if (userPassword !== userVPassword) {
-                resolve('Passwords do not match.');
-            } else if (!isValidEmail(userEmail)) {
-                resolve('Invalid DLSU email format.');
-            } else if (!isStrongPassword(userPassword)) {
-                resolve('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
-            } else {
-                bcrypt.hash(userPassword, saltRounds, function(err, hash) {
-                    userPassword = hash;
-                
-                    const hashedSecurityQuestions = [];
-                    let questionsProcessed = 0;
+                return;
+            }
+            
+            // Check if username already exists
+            col.findOne(usernameQuery).then(function(usernameVal){
+                if (usernameVal != null){
+                    resolve('Username already in use. Please choose a different username.');
+                    return;
+                } else if (userPassword !== userVPassword) {
+                    resolve('Passwords do not match.');
+                    return;
+                } else if (!isValidEmail(userEmail)) {
+                    resolve('Invalid DLSU email format.');
+                    return;
+                } else if (!isStrongPassword(userPassword)) {
+                    resolve('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
+                    return;
+                } else {
+                    bcrypt.hash(userPassword, saltRounds, function(err, hash) {
+                        userPassword = hash;
+                    
+                        const hashedSecurityQuestions = [];
+                        let questionsProcessed = 0;
 
-                    securityQuestions.forEach((qa, index) => {
-                        bcrypt.hash(qa.answer.toLowerCase().trim(), saltRounds, function(err, answerHash) {
-                            hashedSecurityQuestions.push({
-                                question: qa.question,
-                                answer: answerHash
+                        securityQuestions.forEach((qa, index) => {
+                            bcrypt.hash(qa.answer.toLowerCase().trim(), saltRounds, function(err, answerHash) {
+                                hashedSecurityQuestions.push({
+                                    question: qa.question,
+                                    answer: answerHash
+                                });
+                                
+                                questionsProcessed++;
+
+                                if (questionsProcessed === securityQuestions.length) {
+                                    const info = {
+                                        email: userEmail,
+                                        password: userPassword,
+                                        role: role,
+                                        pfp: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
+                                        username: userName,
+                                        bio: "",
+                                        failedAttempts: 0,
+                                        lockUntil: null,
+                                        lastPasswordChange: new Date(),
+                                        lastLogin: null,
+                                        lastLoginStatus: null,
+                                        securityQuestions: hashedSecurityQuestions,
+                                        passwordHistory: [],
+                                        passwordResetAttempts: 0,
+                                        passwordResetLockUntil: null,
+                                    };
+                                    col.insertOne(info).then(function(res){
+                                    }).catch(errorFn);
+                                    resolve('Success!');
+                                }
                             });
-                            
-                            questionsProcessed++;
-
-                            if (questionsProcessed === securityQuestions.length) {
-                                const info = {
-                                    email: userEmail,
-                                    password: userPassword,
-                                    role: role,
-                                    pfp: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
-                                    username: userName,
-                                    bio: "",
-                                    failedAttempts: 0,
-                                    lockUntil: null,
-                                    lastPasswordChange: new Date(),
-                                    lastLogin: null,
-                                    lastLoginStatus: null,
-                                    securityQuestions: hashedSecurityQuestions,
-                                    passwordHistory: [],
-                                    passwordResetAttempts: 0,
-                                    passwordResetLockUntil: null,
-                                };
-                                col.insertOne(info).then(function(res){
-                                }).catch(errorFn);
-                                resolve('Success!');
-                            }
                         });
                     });
-                });
-            }
+                }
+            }).catch(reject);
         }).catch(reject);
     });
 }

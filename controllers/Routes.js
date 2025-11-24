@@ -1193,6 +1193,7 @@ function sortByStartTime(array) {
 
 server.post('/save-profile', function(req, resp){
     var username = String(req.body.username);
+    var bio = String(req.body.bio);
     
     // Add username length validation
     if (username.length > 15) {
@@ -1203,6 +1204,17 @@ server.post('/save-profile', function(req, resp){
             errMsg: 'Username must be 15 characters or less.'
         });
     }
+
+    if (bio.length > 1500) {
+        return resp.render('edit-profile',{
+            layout: 'profileIndex',
+            title: 'Edit Profile',
+            user: req.session.curUserData,
+            errMsg: 'Bio must be 150 characters or less.'
+        });
+    }
+
+    console.log('%d', bio.length);
 
     responder.updateProfile( req.session.curUserData.email, req.body.username, req.body['prof-pic'], req.body.bio)
     .then(whatever => {
