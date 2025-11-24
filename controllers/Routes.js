@@ -167,6 +167,21 @@ server.post('/register-checker', function(req, resp){
         }
     ];
 
+    // Validate that answers for "How many siblings do you have?" are non-negative numbers only
+    for (let i = 0; i < securityQuestions.length; i++) {
+        if (securityQuestions[i].question === "How many siblings do you have?") {
+            const answer = securityQuestions[i].answer;
+            if (!isValidNonNegativeNumber(answer)) {
+                return resp.render('register',{
+                    layout: 'registerIndex',
+                    title: 'Register Page',
+                    emailErrMsg: 'Security Answer "How many siblings do you have?" must be a non-negative number.'
+                });
+            }
+        }
+    }
+   
+
     const questionSet = new Set(securityQuestions.map(q => q.question));
     if (questionSet.size !== 3) {
         return resp.render('register',{
@@ -1834,3 +1849,7 @@ server.use((err, req, resp, next) => {
 }
 
 module.exports.add = add;
+
+const isValidNonNegativeNumber = (value) => {
+    return /^\d+$/.test(value); // Regex to match only digits (non-negative integers)
+};
