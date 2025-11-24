@@ -283,55 +283,79 @@ server.post('/login-checker', function(req, resp) {
             const previousLoginTime = authResult.user.lastLogin;
             const previousLoginStatus = authResult.user.lastLoginStatus;
             
-            // Update lastLogin in database
+            // Update lastLogin in database for SUCCESSFUL login
             return responder.updateLastLogin(userEmail)
                 .then(() => {
                     // Get the updated user data
                     return responder.getUserByEmail(userEmail)
                         .then(updatedUser => {
                             return {
+                                success: true,
                                 user: updatedUser,
                                 previousLoginTime: previousLoginTime,
                                 previousLoginStatus: previousLoginStatus
                             };
                         });
                 });
-        } else if (authResult.user && authResult.user.locked) {
-            responder.addLogs(userEmail, "N/A", `Account locked due to too many failed attempts`, "Fail");
-            resp.render('login', {
-                layout: 'loginIndex',
-                title: 'Login Page',
-                errMsg: 'Account locked. Please try again after 15 minutes.'
-            });
-            return Promise.resolve(null); // Stop further processing
+        } else if (authResult.locked) {
+            // Account is locked - update the database with failed attempt
+            return responder.updateFailedLogin(userEmail)
+                .then(() => {
+                    responder.addLogs(userEmail, "N/A", `Account locked due to too many failed attempts`, "Fail");
+                    return {
+                        success: false,
+                        locked: true,
+                        message: 'Account locked. Please try again after 15 minutes.'
+                    };
+                });
         } else {
-            responder.addLogs("N/A", "N/A", `User Login Failed`, "Fail");
-            resp.render('login',{
-                layout: 'loginIndex',
-                title: 'Login Page',
-                errMsg: 'Email and password don\'t match'
-            });
-            return Promise.resolve(null); // Stop further processing
+            // Failed login - update the database with failed attempt
+            return responder.updateFailedLogin(userEmail)
+                .then(() => {
+                    responder.addLogs(userEmail, "N/A", `User Login Failed`, "Fail");
+                    return {
+                        success: false,
+                        locked: false,
+                        message: 'Email and password don\'t match'
+                    };
+                });
         }             
     })
     .then(loginResult => {
-        if (!loginResult) return; // Login failed, already handled
+        if (!loginResult) return; // Should not happen with current flow
         
-        const { user, previousLoginTime, previousLoginStatus } = loginResult;
-        
-        responder.addLogs(userEmail, user.role, `User Login successfully`, "Success");
-        req.session.isAuth = true;
-        req.session.showLoginAlert = true;
+        if (loginResult.success) {
+            const { user, previousLoginTime, previousLoginStatus } = loginResult;
+            
+            responder.addLogs(userEmail, user.role, `User Login successfully`, "Success");
+            req.session.isAuth = true;
+            req.session.showLoginAlert = true;
 
-        if(req.body.remember != 'on'){
-            req.session.cookie.expires = false; 
+            if(req.body.remember != 'on'){
+                req.session.cookie.expires = false; 
+            }
+
+            // Store both current and previous login info
+            req.session.lastLoginTime = previousLoginTime;
+            req.session.lastLoginStatus = previousLoginStatus;
+            req.session.curUserData = user;
+            resp.redirect('/mainMenu');
+        } else {
+            // Handle failed login
+            if (loginResult.locked) {
+                resp.render('login', {
+                    layout: 'loginIndex',
+                    title: 'Login Page',
+                    errMsg: loginResult.message
+                });
+            } else {
+                resp.render('login', {
+                    layout: 'loginIndex',
+                    title: 'Login Page',
+                    errMsg: loginResult.message
+                });
+            }
         }
-
-        // Store both current and previous login info
-        req.session.lastLoginTime = previousLoginTime;
-        req.session.lastLoginStatus = previousLoginStatus;
-        req.session.curUserData = user;
-        resp.redirect('/mainMenu');
     })
     .catch(error => {
         errorPage(500, error, req, resp);
