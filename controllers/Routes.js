@@ -57,6 +57,9 @@ function isValidEmail(email) {
 function add(server){
 /******************insert controller code in this area, preferably new code goes at the bottom**************** */
 
+const isValidNonNegativeNumber = (value) => {
+    return /^\d+$/.test(value); // Regex to match only digits (non-negative integers)
+};
 
 
 server.use(session({
@@ -149,6 +152,14 @@ server.post('/register-checker', function(req, resp){
     var userVPassword = String(req.body.vpassword);
     var role = "roleB";
 
+    if (userName.length > 15) {
+        return resp.render('register',{
+            layout: 'registerIndex',
+            title: 'Register Page',
+            emailErrMsg: 'Username must be 15 characters or less.'
+        });
+    }
+
     const securityQuestions = [
         {
             question: req.body.securityQuestion1,
@@ -164,6 +175,18 @@ server.post('/register-checker', function(req, resp){
         }
     ];
 
+    for (let i = 0; i < securityQuestions.length; i++) {
+        if (securityQuestions[i].question === "How many siblings do you have?") {
+            const answer = securityQuestions[i].answer;
+            if (!isValidNonNegativeNumber(answer)) {
+                return resp.render('register',{
+                    layout: 'registerIndex',
+                    title: 'Register Page',
+                    emailErrMsg: 'Security Answer "How many siblings do you have?" must be a non-negative number.'
+                });
+            }
+        }
+    }
 
     const questionSet = new Set(securityQuestions.map(q => q.question));
     if (questionSet.size !== 3) {
@@ -587,6 +610,10 @@ server.get('/public-profile/:id/', isAuth, function(req, resp) {
 server.post('/change_username', function(req, resp){
     var username  = String(req.body.username);
     var email =  req.session.curUserData.email;
+
+    if (username.length > 15) {
+        return resp.send({username : req.session.curUserData.username, error: 'Username must be 15 characters or less.'});
+    }
 
     responder.getUserByEmail(req.session.curUserMail).then(user=> {
         responder.addLogs(req.session.curUserMail, user.role,
@@ -1117,6 +1144,18 @@ function sortByStartTime(array) {
 }
 
 server.post('/save-profile', function(req, resp){
+    var username = String(req.body.username);
+    
+    // Add username length validation
+    if (username.length > 15) {
+        return resp.render('edit-profile',{
+            layout: 'profileIndex',
+            title: 'Edit Profile',
+            user: req.session.curUserData,
+            errMsg: 'Username must be 15 characters or less.'
+        });
+    }
+
     responder.updateProfile( req.session.curUserData.email, req.body.username, req.body['prof-pic'], req.body.bio)
     .then(whatever => {
         responder.getUserByEmail( req.session.curUserData.email)
