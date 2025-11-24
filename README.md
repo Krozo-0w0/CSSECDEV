@@ -4,7 +4,7 @@
 Instructions:
 1. Open terminal in and go to the same terminal.
 2. Type "npm init" to initialize the code.
-3. Type "npm i express express-handlebars body-parser mongodb bcrypt dotenv nodedemon" or "npm install" to install the necessary modules.
+3. Type "npm i express express-handlebars body-parser mongodb bcrypt dotenv" or "npm install" to install the necessary modules.
 4. Type "node app.js" to run the server then go to localhost:3000 on the browser.
 
 Sample Data
