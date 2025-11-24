@@ -75,6 +75,7 @@ const isAuth = (req, res, next) => {
     if(req.session.isAuth){
         next();
     }else{
+        responder.addLogs("N/A", "N/A", `Unkown user Accessing ${req.url}`, "Fail");
         res.redirect('/');  
     }
 }
