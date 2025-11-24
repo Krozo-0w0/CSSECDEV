@@ -177,6 +177,16 @@ server.post('/register-checker', function(req, resp){
     ];
 
     for (let i = 0; i < securityQuestions.length; i++) {
+        if (securityQuestions[i].answer.length > 200) {
+            return resp.render('register', {
+                layout: 'registerIndex',
+                title: 'Register Page',
+                emailErrMsg: 'Security answers must be 200 characters or less.'
+            });
+        }
+    }
+
+    for (let i = 0; i < securityQuestions.length; i++) {
         if (securityQuestions[i].question === "How many siblings do you have?") {
             const answer = securityQuestions[i].answer;
             if (!isValidNonNegativeNumber(answer)) {
