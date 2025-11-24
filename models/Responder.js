@@ -119,6 +119,112 @@ function getUser(userEmail, userPassword) {
 }
 module.exports.getUser = getUser;
 
+function verifyCredentials(userEmail, userPassword) {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+    const MAX_ATTEMPTS = 5;
+    const LOCK_DURATION = 15 * 60 * 1000;
+
+    return new Promise((resolve, reject) => {
+        col.findOne({ email: userEmail }).then(function (user) {
+            if (!user) {
+                resolve(null);
+                return;
+            }
+
+            if (user.lockUntil && user.lockUntil > Date.now()) {
+                console.log(`Account ${userEmail} is locked until ${user.lockUntil}`);
+                resolve({ locked: true });
+                return;
+            }
+
+            if (user.lockUntil && user.lockUntil <= Date.now()) {
+                col.updateOne(
+                    { email: userEmail },
+                    { $set: { lockUntil: null, failedAttempts: 0 } }
+                );
+            }
+
+            bcrypt.compare(userPassword, user.password, function (err, result) {
+                if (result) {
+                    // if successful = failed attempts resets and unlocked while also updating last login
+                    resolve({ 
+                        valid: true, 
+                        user: user,
+                        needsUnlock: user.failedAttempts > 0 || user.lockUntil !== null
+                    });
+                } else {
+                    // If max attempts = goodbye! lock the account lol
+                    let attempts = (user.failedAttempts || 0) + 1;
+                    let update = { failedAttempts: attempts, lastLoginStatus: "Fail" };
+                    
+                    if (attempts >= MAX_ATTEMPTS) {
+                        update.lockUntil = new Date(Date.now() + LOCK_DURATION);
+                        console.log(`Account ${userEmail} locked for 15 minutes.`);
+                    }
+
+                    col.updateOne({ email: userEmail }, { $set: update });
+                    resolve({ valid: false, locked: attempts >= MAX_ATTEMPTS });
+                }
+            });
+        }).catch(reject);
+    });
+}
+module.exports.verifyCredentials = verifyCredentials;
+
+function updateLastLogin(userEmail) {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+
+    return new Promise((resolve, reject) => {
+        col.updateOne(
+            { email: userEmail },
+            { 
+                $set: { 
+                    lastLogin: new Date(), 
+                    lastLoginStatus: "Success",
+                    failedAttempts: 0,
+                    lockUntil: null
+                } 
+            }
+        ).then(res => resolve(res.modifiedCount > 0))
+         .catch(reject);
+    });
+}
+module.exports.updateLastLogin = updateLastLogin;
+
+function updateFailedLogin(userEmail) {
+    const dbo = mongoClient.db(databaseName);
+    const col = dbo.collection(colUsers);
+    const MAX_ATTEMPTS = 5;
+    const LOCK_DURATION = 15 * 60 * 1000;
+
+    return new Promise((resolve, reject) => {
+        col.findOne({ email: userEmail }).then(function(user) {
+            if (!user) {
+                resolve(false);
+                return;
+            }
+
+            let attempts = (user.failedAttempts || 0) + 1;
+            let update = { 
+                failedAttempts: attempts, 
+                lastLogin: new Date(),
+                lastLoginStatus: "Fail" 
+            };
+            
+            if (attempts >= MAX_ATTEMPTS) {
+                update.lockUntil = new Date(Date.now() + LOCK_DURATION);
+            }
+
+            col.updateOne({ email: userEmail }, { $set: update })
+                .then(res => resolve(res.modifiedCount > 0))
+                .catch(reject);
+        }).catch(reject);
+    });
+}
+module.exports.updateFailedLogin = updateFailedLogin;
+
 
 function getLogs() {
     const dbo = mongoClient.db(databaseName);

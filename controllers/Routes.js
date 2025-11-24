@@ -270,49 +270,72 @@ function errorPage(errorNum, error, req, resp){
 
 // johans - added lockout checker; if else lang yun
 // CHECK-LOGIN check if login info is valid, success => redirects to main page, failure => rerender page
-    server.post('/login-checker', function(req, resp) {
-        let userEmail = req.body.email;
-        let userPassword = req.body.password;
-        req.session.curUserMail = req.body.email;
+server.post('/login-checker', function(req, resp) {
+    let userEmail = req.body.email;
+    let userPassword = req.body.password;
+    req.session.curUserMail = req.body.email;
 
-        responder.getUser(userEmail, userPassword)
-        .then(user => {
-            if (user && !user.locked){
-                responder.addLogs(userEmail, user.role, `User Login succesfully`, "Success");
-                req.session.isAuth = true;
-                
-                req.session.showLoginAlert = true;
-
-                if(req.body.remember != 'on'){
-                    req.session.cookie.expires = false; 
-                }
-
-                req.session.lastLoginTime = user.lastLogin;
-                req.session.lastLoginStatus = user.lastLoginStatus;
-                req.session.curUserData = user;
-                resp.redirect('/mainMenu');
- 
-            } else if (user && user.locked){
-                responder.addLogs(userEmail, "N/A", `Account locked due to too many failed attempts`, "Fail");
-                resp.render('login', {
-                    layout: 'loginIndex',
-                    title: 'Login Page',
-                    errMsg: 'Account locked. Please try again after 15 minutes.'
+    responder.verifyCredentials(userEmail, userPassword)
+    .then(authResult => {
+        if (authResult.valid && !authResult.user.locked) {
+            // Store previous login info BEFORE updating
+            const previousLoginTime = authResult.user.lastLogin;
+            const previousLoginStatus = authResult.user.lastLoginStatus;
+            
+            // Update lastLogin in database
+            return responder.updateLastLogin(userEmail)
+                .then(() => {
+                    // Get the updated user data
+                    return responder.getUserByEmail(userEmail)
+                        .then(updatedUser => {
+                            return {
+                                user: updatedUser,
+                                previousLoginTime: previousLoginTime,
+                                previousLoginStatus: previousLoginStatus
+                            };
+                        });
                 });
-            } else {
-                responder.addLogs("N/A", "N/A", `User Login Failed`, "Fail");
-                resp.render('login',{
-                    layout: 'loginIndex',
-                    title: 'Login Page',
-                    errMsg: 'Email and password don\'t match'
-                });
-            }             
-        })
-        .catch(error => {
-            errorPage(500, error, req, resp);
-        });
+        } else if (authResult.user && authResult.user.locked) {
+            responder.addLogs(userEmail, "N/A", `Account locked due to too many failed attempts`, "Fail");
+            resp.render('login', {
+                layout: 'loginIndex',
+                title: 'Login Page',
+                errMsg: 'Account locked. Please try again after 15 minutes.'
+            });
+            return Promise.resolve(null); // Stop further processing
+        } else {
+            responder.addLogs("N/A", "N/A", `User Login Failed`, "Fail");
+            resp.render('login',{
+                layout: 'loginIndex',
+                title: 'Login Page',
+                errMsg: 'Email and password don\'t match'
+            });
+            return Promise.resolve(null); // Stop further processing
+        }             
+    })
+    .then(loginResult => {
+        if (!loginResult) return; // Login failed, already handled
+        
+        const { user, previousLoginTime, previousLoginStatus } = loginResult;
+        
+        responder.addLogs(userEmail, user.role, `User Login successfully`, "Success");
+        req.session.isAuth = true;
+        req.session.showLoginAlert = true;
 
+        if(req.body.remember != 'on'){
+            req.session.cookie.expires = false; 
+        }
+
+        // Store both current and previous login info
+        req.session.lastLoginTime = previousLoginTime;
+        req.session.lastLoginStatus = previousLoginStatus;
+        req.session.curUserData = user;
+        resp.redirect('/mainMenu');
+    })
+    .catch(error => {
+        errorPage(500, error, req, resp);
     });
+});
 
 // PROFILE 
 server.get('/profile', isAuth, function(req, resp) {
@@ -362,8 +385,8 @@ server.get('/mainMenu', isAuth, function(req, resp) {
     .then(user => {
 
         const lastLoginInfo = {
-            lastLoginTime: user.lastLogin,
-            lastLoginStatus: user.lastLoginStatus,
+            lastLoginTime: req.session.lastLoginTime,
+            lastLoginStatus: req.session.lastLoginStatus,
             currentLoginTime: new Date()
         };
 
