@@ -23,9 +23,6 @@ $(document).ready(function(){
         var timeParts = timeStart.split(":");
 
         const timeFrame = add30Minutes(String(timeStart));
-
-        console.log(timeFrame);
-
  
         $.post('addTimeFrame', {date, timeStart, timeEnd:timeFrame},
         function(data, status){

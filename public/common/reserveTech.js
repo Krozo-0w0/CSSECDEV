@@ -16,7 +16,6 @@ $(document).ready(function(){
     function(data, status){
       if(status==='success'){
 
-        console.log(data.status);
         if(data.status == 'lol'){
           location.reload();
         }

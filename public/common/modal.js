@@ -74,7 +74,6 @@ document.addEventListener('click', event => {
   if (closeButton) {
     const modal = closeButton.closest('.modal');
     closeModal(modal);
-    console.log(idA);
   }
 });
 

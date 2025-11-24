@@ -49,7 +49,6 @@ $(document).ready(function(){
       function(data, status){
         if(status === 'success'){
           $('#labContainer').empty();
-          console.log(data);
           for (let i = 0 ; i < data.labs.length; i++){
               var textContent = $(`
               <div class="laboratoryContainer" onclick="window.location.href = '/labs/` + data.labs[i]['_id'] + `'">
