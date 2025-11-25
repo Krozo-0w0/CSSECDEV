@@ -37,9 +37,6 @@ $("#confirmDeleteBtn").on("click", function () {
         adminPassword: password
     })
     .done(function (data) {
-
-        console.log("DeleteUser response:", data); // DEBUG LOG
-
         if (data.status === "success") {
             alert(`${userToDelete} successfully deleted.`);
 			window.location.href='/';

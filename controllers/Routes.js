@@ -1514,28 +1514,38 @@ server.post("/deleteUser", isAuth(), async (req, resp) => {
 
         const user = await responder.getUserByEmail(curuser);
 
-        if (!user) {
-            return resp.send({ status: "error", message: "Admin not found" });
-        }
-
         const authResult = await responder.verifyCredentials(curuser, adminPassword);
-
         if (!authResult.valid) {
             await responder.addLogs(curuser, user.role, `Incorrect Password to delete user ${targetEmail}`, "Fail");
             return resp.send({ status: "error2" });
         }
-        var result;
 
-        if(user === "admin"){
+        let result;
+        if(user.role === "admin" && targetEmail){
             result = await responder.deleteProfile(targetEmail);
-        }else{
+        } else {
             result = await responder.deleteProfile(curuser);
         }
 
         if (result) {
-            await responder.addLogs(curuser, user.role, `User deleted user ${targetEmail}`, "Success");
-            
-            return resp.send({ status: "success" });
+            // Respond differently for self-delete vs admin-delete
+            if (user.role === "admin" && targetEmail) {
+                await responder.addLogs(curuser, user.role, `User deleted user ${targetEmail}`, "Success");
+                if(targetEmail === curuser){
+                    req.session.destroy((err) => {
+                        if (err) console.error("Session destroy error:", err);
+                    });
+                    return resp.send({ status: "success2" });
+                }
+
+                return resp.send({ status: "success" });
+            } else {
+                await responder.addLogs(curuser, user.role, `User deleted user deleted their account`, "Success");
+                req.session.destroy((err) => {
+                    if (err) console.error("Session destroy error:", err);
+                });
+                return resp.send({ status: "success" }); // frontend will redirect
+            }
 
         } else {
             await responder.addLogs(curuser, user.role, `User failed to delete user ${targetEmail}`, "Fail");
@@ -1547,6 +1557,7 @@ server.post("/deleteUser", isAuth(), async (req, resp) => {
         return errorPage(500, error, req, resp);
     }
 });
+
 
 //johans - forgot password route
 server.get('/forgot-password', function(req, res) {

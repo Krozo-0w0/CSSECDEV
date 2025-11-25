@@ -85,7 +85,11 @@ $(document).ready(function() {
             if (status === "success" && data.status === "success") {
                 alert(`${userToDelete} successfully deleted.`);
                 window.location.reload();
-            } else if (data.status === "error2"){
+            } else if(data.status === "success2"){
+                alert(`${userToDelete} successfully deleted.`);
+                window.location.href='/';
+            }
+            else if (data.status === "error2"){
                 alert(`Incorrect Password.`);
             }else{
                 alert(data.message || `Failed to delete ${userToDelete}.`);
