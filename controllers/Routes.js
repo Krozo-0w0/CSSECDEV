@@ -58,7 +58,12 @@ function add(server){
 /******************insert controller code in this area, preferably new code goes at the bottom**************** */
 
 const isValidNonNegativeNumber = (value) => {
-    return /^\d+$/.test(value); // Regex to match only digits (non-negative integers)
+    // Check if it's all digits
+    if (!/^\d+$/.test(value)) return false;
+
+    // Convert to number and check range
+    const num = parseInt(value, 10);
+    return num >= 0 && num <= 20;
 };
 
 
@@ -208,7 +213,7 @@ server.post('/register-checker', function(req, resp){
                 return resp.render('register',{
                     layout: 'registerIndex',
                     title: 'Register Page',
-                    emailErrMsg: 'Security Answer "How many siblings do you have?" must be a non-negative number.'
+                    emailErrMsg: 'Security Answer "How many siblings do you have?" must be a non-negative number. and within (0-20)'
                 });
             }
         }
@@ -241,57 +246,45 @@ server.post('/register-checker', function(req, resp){
         errorPage(500, error, req, resp);
     });
 });
+async function errorPage(errorNum, error, req, resp) {
+    let message = "";
 
-function errorPage(errorNum, error, req, resp){
-    var message = "";
-
-    if (errorNum === 400) {
-        message = "Bad Request. The data sent to the server was invalid.";
-    } 
-    else if (errorNum === 401) {
-        message = "Unauthorized. You must be logged in to access this resource.";
-    } 
-    else if (errorNum === 403) {
-        message = "Forbidden. You do not have permission to access this resource.";
-    } 
-    else if (errorNum === 404) {
-        message = "Page Not Found. The resource you requested does not exist.";
-    } 
-    else if (errorNum === 409) {
-        message = "Conflict. The request could not be completed due to a conflict.";
-    } 
-    else if (errorNum === 429) {
-        message = "Too Many Requests. You are sending requests too quickly.";
-    } 
-    else if (errorNum === 500) {
-        message = "Internal Server Error. Something went wrong on our end.";
-    } 
-    else if (errorNum === 503) {
-        message = "Service Unavailable. The server is currently unavailable.";
-    } 
-    else {
-        message = "Unknown Error Occurred.";
+    switch (errorNum) {
+        case 400: message = "Bad Request. The data sent to the server was invalid."; break;
+        case 401: message = "Unauthorized. You must be logged in to access this resource."; break;
+        case 403: message = "Forbidden. You do not have permission to access this resource."; break;
+        case 404: message = "Page Not Found. The resource you requested does not exist."; break;
+        case 409: message = "Conflict. The request could not be completed due to a conflict."; break;
+        case 429: message = "Too Many Requests. You are sending requests too quickly."; break;
+        case 500: message = "Internal Server Error. Something went wrong on our end."; break;
+        case 503: message = "Service Unavailable. The server is currently unavailable."; break;
+        default: message = "Unknown Error Occurred.";
     }
 
-     responder.getUserByEmail(req.session.curUserMail)
-    .then(name => {
-        responder.addLogs(req.session.curUserMail, name.role, error, "Fail");
-        resp.render('error', {
-            layout: 'loginIndex',
-            title: 'Error Page',
-            errNum: errorNum,
-            errMess: message
-        });
-    }).catch(error2 => {
-        responder.addLogs("N/A", "N/A", error, "Fail");
-        resp.render('error', {
-            layout: 'loginIndex',
-            title: 'Error Page',
-            errNum: errorNum,
-            errMess: message
-        });
-    });  
+    try {
+        const user = await responder.getUserByEmail(req.session.curUserMail);
+        const role = user?.role || "N/A";
+
+        await responder.addLogs(
+            req.session.curUserMail || "N/A",
+            role,
+            error,
+            "Fail"
+        );
+
+    } catch (logErr) {
+        await responder.addLogs("N/A", "N/A", error, "Fail");
+    }
+
+    // Render error page in both cases
+    resp.render("error", {
+        layout: "loginIndex",
+        title: "Error Page",
+        errNum: errorNum,
+        errMess: message
+    });
 }
+
 
 
 // johans - added lockout checker; if else lang yun
@@ -613,9 +606,9 @@ server.post('/deleteProfile', isAuth(), function(req, resp){
 // MAIN PAGE: SIDEBAR PEOPLE
 server.post('/load-people', isAuth(), function(req, resp){
     if( req.session.searchQuery != null){
-        responder.userSearch( req.session.searchQuery)
+        responder.userSearch( req.session.searchQuery.slice(0, 256))
         .then(users => {
-            resp.send({users:users,searchQuery :  req.session.searchQuery});
+            resp.send({users:users,searchQuery :  req.session.searchQuery.slice(0, 256)});
         }).catch(error => {
         errorPage(500, error, req, resp);
     });
@@ -632,9 +625,9 @@ server.post('/load-people', isAuth(), function(req, resp){
 
 server.post('/load-labs', isAuth(), function(req, resp){
     if( req.session.searchQuery != null){
-        responder.labSearch( req.session.searchQuery)
+        responder.labSearch( req.session.searchQuery.slice(0, 256))
         .then(labs => {
-            resp.send({labs:labs, searchQuery :  req.session.searchQuery});
+            resp.send({labs:labs, searchQuery :  req.session.searchQuery.slice(0, 256)});
         }).catch(error => {errorPage(500, error, req, resp);});
     } else{
         responder.getLabs()
@@ -647,9 +640,9 @@ server.post('/load-labs', isAuth(), function(req, resp){
 
 server.post('/load-labsbyTags', isAuth(), function(req, resp){
     if( req.session.searchQuery != null){
-        responder.tagSearch( req.session.searchQuery)
+        responder.tagSearch( req.session.searchQuery.slice(0, 256))
         .then(labs => {
-            resp.send({labs:labs, searchQuery : req.session.searchQuery});
+            resp.send({labs:labs, searchQuery : req.session.searchQuery.slice(0, 256)});
         }).catch(error => {errorPage(500, error, req, resp);});
     } else{
         responder.getLabs()
@@ -936,63 +929,70 @@ server.post("/modalTech", isAuth(), function(req, resp){
     .catch(error => { errorPage(500, error, req, resp); });
 });
 
-server.post('/reserve', isAuth(), function(req, resp){
-    const currentDate = new Date();
-    const date = getCurrentDate();
+server.post('/reserve', isAuth(), async function(req, resp){
+    try {
+        const currentDate = new Date();
+        const date = getCurrentDate();
+        const time = `${String(currentDate.getHours()).padStart(2,'0')}:${String(currentDate.getMinutes()).padStart(2,'0')}:${String(currentDate.getSeconds()).padStart(2,'0')}`;
 
-    //time
-    const hours = String(currentDate.getHours()).padStart(2, '0');
-    const minutes = String(currentDate.getMinutes()).padStart(2, '0');
-    const seconds = String(currentDate.getSeconds()).padStart(2, '0');
-    const time = `${hours}:${minutes}:${seconds}`;
+        const user = await responder.getUserByEmail(req.session.curUserMail);
+        const reserving = await responder.getUserByEmail(req.body.email);
 
-    responder.getUserByEmail( req.session.curUserMail)
-    .then(user=>{
-        responder.getUserByEmail( req.body.email)
-        .then(reserving => {
-            var seat  = String(req.body.seat);
-            var room  = String(req.body.room);
-            var timeFrame  = String(req.body.timeFrame);
-            var anon = req.body.anon == 'true';
-            var resDate = req.body.date;
-            var walkin = user.role == "admin" || user.role == "roleA";
-            var name;
+        const seat = String(req.body.seat);
+        const room = String(req.body.room);
+        const timeFrame = String(req.body.timeFrame);
+        const anon = req.body.anon === 'true';
+        const resDate = req.body.date;
+        const walkin = user.role === "admin" || user.role === "roleA";
 
-            if(walkin){
-                if(reserving == null){
-                    responder.addLogs(req.session.curUserMail, user.role,`User reserve failed unkown email used`, "Fail");
-                    resp.send({status: "failed", reserve: null});
-                    return;
-                }
-                name = reserving.username;
-                responder.addLogs(req.session.curUserMail, user.role,`User reserved for ${reserving.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");
-                responder.addReservation(date+ "|" +time, name, req.body.email, resDate, seat, room, timeFrame, anon, walkin)
-            }else{
-                responder.addLogs(req.session.curUserMail, user.role,`User reserved for ${user.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");
-                name = user.username;
-                responder.addReservation(date+ "|" +time, name, user.email, resDate, seat, room, timeFrame, anon, walkin)
+        const roomData = await responder.getLabByName(room);
+
+        const match = seat.match(/^C(\d+)S(\d+)$/i);
+        if (!match) return resp.send({status: "Failed", reserve: null});
+
+        const cNumber = parseInt(match[1], 10);
+        const sNumber = parseInt(match[2], 10);
+
+        if (cNumber < 1 || cNumber > roomData.numCols) return resp.send({status: "Failed", reserve: null});
+        if (sNumber < 1 || sNumber > parseInt(roomData.seats)) return resp.send({status: "Failed", reserve: null});
+
+        let name;
+
+        if (walkin) {
+            if (!reserving) {
+                await responder.addLogs(req.session.curUserMail, user.role, `User reserve failed unknown email used`, "Fail");
+                return resp.send({status: "failed", reserve: null});
             }
+            name = reserving.username;
+            await responder.addLogs(req.session.curUserMail, user.role, `User reserved for ${reserving.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");
+            await responder.addReservation(`${date}|${time}`, name, req.body.email, resDate, seat, room, timeFrame, anon, walkin);
+        } else {
+            name = user.username;
+            await responder.addLogs(req.session.curUserMail, user.role, `User reserved for ${user.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");
+            await responder.addReservation(`${date}|${time}`, name, user.email, resDate, seat, room, timeFrame, anon, walkin);
+        }
 
-                let obj = {
-                    dateTime: date+ "|" +time,
-                    name: name,
-                    email: req.body.email,
-                    bookDate: resDate,
-                    seat: seat,
-                    room: room,
-                    timeFrame: timeFrame,
-                    anon: anon,
-                    status: "active",
-                    isWalkin: walkin,
-                };
-                console.log(obj);
+        const obj = {
+            dateTime: `${date}|${time}`,
+            name,
+            email: req.body.email,
+            bookDate: resDate,
+            seat,
+            room,
+            timeFrame,
+            anon,
+            status: "active",
+            isWalkin: walkin
+        };
 
-                resp.send({status: "reserved", reserve: obj});
-              
-        }).catch(error => { errorPage(500, error, req, resp); });                
-    })
-    .catch(error => { errorPage(500, error, req, resp); });
+        console.log(obj);
+        return resp.send({status: "reserved", reserve: obj});
+
+    } catch (error) {
+        return errorPage(500, error, req, resp); // only one response here
+    }
 });
+
 
 server.post('/getTimeFrames', function(req, resp){
 
@@ -1149,7 +1149,7 @@ server.post('/filterLogs', isAuth("admin"), function (req, resp) {
 
     const { email, action, status, fromDate, toDate, role } = req.body;
 
-    responder.filterLogs(email, action, role, status, fromDate, toDate)
+    responder.filterLogs(email.slice(0, 256), action.slice(0, 256), role, status, fromDate, toDate)
         .then(logs => {
             resp.send({ log: logs });
         })
@@ -1236,7 +1236,7 @@ server.post('/save-profile', isAuth(), function(req, resp){
 });
 
 server.post('/searchFunction', isAuth(), function (req, resp) {
-    const searchString = req.body.stringInput;
+    const searchString = req.body.stringInput.slice(0, 256);
     req.session.searchQuery = searchString;
     responder.roomSearch(searchString)
         .then(searchQueryResults => {

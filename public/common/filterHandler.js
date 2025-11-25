@@ -16,7 +16,7 @@ $(document).ready(function(){
             /* Call-back function that processes the server response */
             function(data, status){
               if(status === 'success'){
-                $('#stringInput').attr('placeholder', "Searching for: " + data.searchQuery);
+                $('#stringInput').attr('placeholder', "Searching for: " + data.searchQuery.slice(0, 256));
                 $(".laboratoryContainer").hide();
                 $('.flexParent').empty();
 
@@ -44,7 +44,7 @@ $(document).ready(function(){
        $.post( 'load-labs', { input: 1 } , 
        function(data, status){
         if(status === 'success'){
-          $('#stringInput').attr('placeholder', "Searching for: " + data.searchQuery);
+          $('#stringInput').attr('placeholder', "Searching for: " + data.searchQuery.slice(0, 256));
           $(".profileContainer").hide();
           $('.flexParent').empty();
 
@@ -79,7 +79,7 @@ $(document).ready(function(){
         $.post( 'load-labsbytags', { input: 2 } , 
         function(data, status){
          if(status === 'success'){
-           $('#stringInput').attr('placeholder', "Searching for: " + data.searchQuery);
+           $('#stringInput').attr('placeholder', "Searching for: " + data.searchQuery.slice(0, 256));
            $(".profileContainer").hide();
            $('.flexParent').empty();
  

@@ -14,26 +14,21 @@ $(document).ready(function(){
         });
     });
 
-    //action when click add
-    $('#add').click(function(){
-        //get all the data
-        const date =  $("#date").val();
-        const timeStart =  $("#start-time").val();
+    $('#add').click(function () {
+        const date = $("#date").val();
+        const timeStart = $("#start-time").val();
 
-        var timeParts = timeStart.split(":");
+        if (!timeStart) {
+            alert("Please pick a valid start time.");
+            return;
+        }
 
-        const timeFrame = add30Minutes(String(timeStart));
- 
-        $.post('addTimeFrame', {date, timeStart, timeEnd:timeFrame},
-        function(data, status){
-            if(status === 'success'){
+        const timeFrame = add30Minutes(timeStart);
+
+        $.post('addTimeFrame', { date, timeStart, timeEnd: timeFrame }, function (data, status) {
+            if (status === 'success') {
                 location.reload();
-                if(data.stat === 'success'){
-                    alert("Schedule Added!!");
-                }else{
-                    alert("Conflict With other Time Slots!!");
-                }
-
+                alert(data.stat === 'success' ? "Schedule Added!!" : "Conflict With other Time Slots!!");
             }
         });
     });
