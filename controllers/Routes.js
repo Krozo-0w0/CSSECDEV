@@ -965,7 +965,7 @@ server.post('/reserve', isAuth(), async function(req, resp){
             }
             name = reserving.username;
             await responder.addLogs(req.session.curUserMail, user.role, `User reserved for ${reserving.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");
-            await responder.addReservation(`${date}|${time}`, name, req.body.email, resDate, seat, room, timeFrame, anon, walkin);
+            await responder.addReservation(`${date}|${time}`, name, req.body.email.slice(0, 256), resDate, seat, room, timeFrame, anon, walkin);
         } else {
             name = user.username;
             await responder.addLogs(req.session.curUserMail, user.role, `User reserved for ${user.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");

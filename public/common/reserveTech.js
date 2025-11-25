@@ -165,6 +165,11 @@ $(".cancel").click(function(){
       return;
     }
 
+    if (email.length > 256) {
+      alert('Email cannot be longer than 256 characters!');
+      return;
+  }
+
     if(isDateTimeEarlierThanNow(String(selectedDate), selectedOption)){
       alert("Cannot Reserve, the Reservation time is already Done.");
       return;
