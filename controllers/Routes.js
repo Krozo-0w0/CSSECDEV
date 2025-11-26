@@ -334,7 +334,7 @@ server.post('/login-checker', function(req, resp) {
                     return {
                         success: false,
                         locked: false,
-                        message: 'Email and password don\'t match'
+                        message: 'Invalid email and/or Password'
                     };
                 });
         }             
