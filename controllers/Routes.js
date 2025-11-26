@@ -7,6 +7,10 @@ const { resourceLimits } = require('worker_threads');
 const { Timestamp } = require('mongodb');
 
 
+const safeSlice = v =>
+  typeof v === "string" && v.length > 0
+    ? v.slice(0, 256)
+    : v ?? "";  // fallback if undefined/null
 
 function dateToVerbose(inputDate){
     const dateObject = new Date(inputDate);
@@ -606,9 +610,9 @@ server.post('/deleteProfile', isAuth(), function(req, resp){
 // MAIN PAGE: SIDEBAR PEOPLE
 server.post('/load-people', isAuth(), function(req, resp){
     if( req.session.searchQuery != null){
-        responder.userSearch( req.session.searchQuery.slice(0, 256))
+        responder.userSearch(safeSlice(req.session.searchQuery))
         .then(users => {
-            resp.send({users:users,searchQuery :  req.session.searchQuery.slice(0, 256)});
+            resp.send({users:users,searchQuery :  safeSlice(req.session.searchQuery)});
         }).catch(error => {
         errorPage(500, error, req, resp);
     });
@@ -625,9 +629,9 @@ server.post('/load-people', isAuth(), function(req, resp){
 
 server.post('/load-labs', isAuth(), function(req, resp){
     if( req.session.searchQuery != null){
-        responder.labSearch( req.session.searchQuery.slice(0, 256))
+        responder.labSearch( safeSlice(req.session.searchQuery))
         .then(labs => {
-            resp.send({labs:labs, searchQuery :  req.session.searchQuery.slice(0, 256)});
+            resp.send({labs:labs, searchQuery :  safeSlice(req.session.searchQuery)});
         }).catch(error => {errorPage(500, error, req, resp);});
     } else{
         responder.getLabs()
@@ -640,9 +644,9 @@ server.post('/load-labs', isAuth(), function(req, resp){
 
 server.post('/load-labsbyTags', isAuth(), function(req, resp){
     if( req.session.searchQuery != null){
-        responder.tagSearch( req.session.searchQuery.slice(0, 256))
+        responder.tagSearch( safeSlice(req.session.searchQuery))
         .then(labs => {
-            resp.send({labs:labs, searchQuery : req.session.searchQuery.slice(0, 256)});
+            resp.send({labs:labs, searchQuery : safeSlice(req.session.searchQuery)});
         }).catch(error => {errorPage(500, error, req, resp);});
     } else{
         responder.getLabs()
@@ -965,7 +969,7 @@ server.post('/reserve', isAuth(), async function(req, resp){
             }
             name = reserving.username;
             await responder.addLogs(req.session.curUserMail, user.role, `User reserved for ${reserving.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");
-            await responder.addReservation(`${date}|${time}`, name, req.body.email.slice(0, 256), resDate, seat, room, timeFrame, anon, walkin);
+            await responder.addReservation(`${date}|${time}`, name, safeSlice(req.body.email), resDate, seat, room, timeFrame, anon, walkin);
         } else {
             name = user.username;
             await responder.addLogs(req.session.curUserMail, user.role, `User reserved for ${user.email} seat:${seat} room:${room} anon:${anon} walkin:${walkin}`, "Success");
@@ -1149,7 +1153,7 @@ server.post('/filterLogs', isAuth("admin"), function (req, resp) {
 
     const { email, action, status, fromDate, toDate, role } = req.body;
 
-    responder.filterLogs(email.slice(0, 256), action.slice(0, 256), role, status, fromDate, toDate)
+    responder.filterLogs(safeSlice(email), safeSlice(action), role, status, fromDate, toDate)
         .then(logs => {
             resp.send({ log: logs });
         })
@@ -1236,7 +1240,7 @@ server.post('/save-profile', isAuth(), function(req, resp){
 });
 
 server.post('/searchFunction', isAuth(), function (req, resp) {
-    const searchString = req.body.stringInput.slice(0, 256);
+    const searchString = safeSlice(req.body.stringInput);
     req.session.searchQuery = searchString;
     responder.roomSearch(searchString)
         .then(searchQueryResults => {
