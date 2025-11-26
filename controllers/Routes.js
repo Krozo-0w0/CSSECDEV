@@ -63,7 +63,7 @@ const isValidNonNegativeNumber = (value) => {
 
     // Convert to number and check range
     const num = parseInt(value, 10);
-    return num >= 0 && num <= 20;
+    return num >= 0 && num <= 69;
 };
 
 
@@ -213,7 +213,7 @@ server.post('/register-checker', function(req, resp){
                 return resp.render('register',{
                     layout: 'registerIndex',
                     title: 'Register Page',
-                    emailErrMsg: 'Security Answer "How many siblings do you have?" must be a non-negative number. and within (0-20)'
+                    emailErrMsg: 'Security Answer "How many siblings do you have?" must be a non-negative number. and within (0-69)'
                 });
             }
         }
